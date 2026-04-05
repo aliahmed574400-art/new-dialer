@@ -14,7 +14,6 @@ var jwtOptions = jwtSection.Get<JwtOptions>() ?? new JwtOptions();
 
 builder.Services.AddControllers();
 builder.Services.AddProblemDetails();
-builder.Services.AddHealthChecks();
 builder.Services.AddMemoryCache();
 builder.Services.AddNewDialerCoreServices();
 builder.Services.Configure<JwtOptions>(jwtSection);
@@ -26,6 +25,7 @@ var connectionString =
     ?? "Host=localhost;Port=5432;Database=newdialer;Username=postgres;Password=change-me";
 
 builder.Services.AddDbContext<DialerDbContext>(options => options.UseNpgsql(connectionString));
+builder.Services.AddHealthChecks().AddDbContextCheck<DialerDbContext>();
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -44,6 +44,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
+
+await using (var scope = app.Services.CreateAsyncScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<DialerDbContext>();
+    await dbContext.Database.MigrateAsync();
+}
 
 app.UseExceptionHandler();
 app.UseAuthentication();
