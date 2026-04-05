@@ -6,15 +6,7 @@ namespace NewDialer.Infrastructure.Spreadsheets;
 
 public sealed class ClosedXmlLeadSpreadsheetService : ILeadSpreadsheetService
 {
-    private static readonly string[] RequiredColumns =
-    [
-        "name",
-        "email",
-        "phone",
-        "website",
-        "service",
-        "budget",
-    ];
+    private const string RequiredColumn = "phone";
 
     public Task<LeadSpreadsheetReadResult> ReadLeadsAsync(Stream stream, CancellationToken cancellationToken)
     {
@@ -108,14 +100,10 @@ public sealed class ClosedXmlLeadSpreadsheetService : ILeadSpreadsheetService
 
     private static void ValidateRequiredColumns(IReadOnlyDictionary<string, int> headerMap)
     {
-        var missingColumns = RequiredColumns
-            .Where(column => !GetAliases(column).Any(headerMap.ContainsKey))
-            .ToArray();
-
-        if (missingColumns.Length > 0)
+        if (!GetAliases(RequiredColumn).Any(headerMap.ContainsKey))
         {
             throw new InvalidOperationException(
-                $"The Excel sheet is missing required columns: {string.Join(", ", missingColumns)}.");
+                "The Excel sheet must include a phone column so the dialer knows what number to call.");
         }
     }
 
@@ -138,6 +126,11 @@ public sealed class ClosedXmlLeadSpreadsheetService : ILeadSpreadsheetService
         return normalized switch
         {
             "phone" => ["phone", "phonenumber", "phoneno", "mobile", "contactnumber"],
+            "name" => ["name", "fullname", "full_name", "contactname", "contact_name", "customername", "customer_name"],
+            "email" => ["email", "emailaddress", "email_address", "mail"],
+            "website" => ["website", "web", "url", "site", "companywebsite", "companyurl"],
+            "service" => ["service", "services", "interest", "offering", "category"],
+            "budget" => ["budget", "amount", "price", "estimatedbudget", "estimated_budget", "monthlybudget", "monthly_budget"],
             _ => [normalized],
         };
     }
