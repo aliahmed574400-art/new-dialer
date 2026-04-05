@@ -10,6 +10,7 @@ namespace NewDialer.Desktop.Services;
 public sealed class ZoomDesktopDialerClient
 {
     private const string ZoomProcessName = "Zoom";
+    private const int ShellExecuteSuccessThreshold = 32;
     private const ushort VkControl = 0x11;
     private const ushort VkShift = 0x10;
     private const ushort VkE = 0x45;
@@ -17,6 +18,7 @@ public sealed class ZoomDesktopDialerClient
     private const int SwRestore = 9;
 
     private readonly DesktopAppOptions _options;
+    private readonly string _logPath = Path.Combine(AppContext.BaseDirectory, "dialer-debug.log");
     private string? _cachedExecutablePath;
 
     public ZoomDesktopDialerClient(DesktopAppOptions options)
@@ -28,17 +30,22 @@ public sealed class ZoomDesktopDialerClient
 
     public async Task WarmUpAsync(CancellationToken cancellationToken)
     {
+        Log("WarmUpAsync invoked.");
+
         if (!_options.LaunchZoomWithDialer || IsZoomRunning())
         {
+            Log($"Warm up skipped. LaunchZoomWithDialer={_options.LaunchZoomWithDialer}, IsZoomRunning={IsZoomRunning()}.");
             return;
         }
 
         var executablePath = DiscoverExecutablePath();
         if (string.IsNullOrWhiteSpace(executablePath))
         {
+            Log("Zoom executable not found during warm up.");
             return;
         }
 
+        Log($"Launching Zoom executable for warm up: {executablePath}");
         LaunchProcess(new ProcessStartInfo
         {
             FileName = executablePath,
@@ -52,6 +59,7 @@ public sealed class ZoomDesktopDialerClient
     public async Task StartCallAsync(string phoneNumber, CancellationToken cancellationToken)
     {
         var normalizedPhoneNumber = NormalizePhoneNumber(phoneNumber);
+        Log($"StartCallAsync received number '{phoneNumber}', normalized to '{normalizedPhoneNumber}'.");
         if (string.IsNullOrWhiteSpace(normalizedPhoneNumber))
         {
             throw new InvalidOperationException("A valid phone number is required before Zoom can dial it.");
@@ -61,10 +69,12 @@ public sealed class ZoomDesktopDialerClient
 
         if (!TryLaunchDialRequest(normalizedPhoneNumber))
         {
+            Log("TryLaunchDialRequest returned false.");
             throw new InvalidOperationException(
                 "Zoom desktop dialing is not available. Confirm Zoom Workplace is installed and that Zoom is the default app for zoomphonecall, tel, or callto links on this machine.");
         }
 
+        Log("Dial request launched. Attempting to activate Zoom window.");
         TryActivateZoomWindow();
         await DelayAsync(_options.ZoomActionDelayMs, cancellationToken);
     }
@@ -80,24 +90,26 @@ public sealed class ZoomDesktopDialerClient
     {
         foreach (var dialUri in BuildDialUris(normalizedPhoneNumber))
         {
-            if (LaunchProcess(new ProcessStartInfo
+            Log($"Trying ShellExecute dial URI: {dialUri}");
+            if (LaunchUriWithShellExecute(dialUri))
             {
-                FileName = dialUri,
-                UseShellExecute = true,
-            }))
-            {
+                Log($"ShellExecute accepted dial URI: {dialUri}");
                 return true;
             }
+
+            Log($"ShellExecute rejected dial URI: {dialUri}");
         }
 
         var executablePath = DiscoverExecutablePath();
         if (string.IsNullOrWhiteSpace(executablePath))
         {
+            Log("Zoom executable could not be discovered for direct launch fallback.");
             return false;
         }
 
         foreach (var dialUri in BuildDialUris(normalizedPhoneNumber))
         {
+            Log($"Trying direct Zoom launch with URI: {dialUri}");
             if (LaunchProcess(new ProcessStartInfo
             {
                 FileName = executablePath,
@@ -106,16 +118,21 @@ public sealed class ZoomDesktopDialerClient
                 WorkingDirectory = Path.GetDirectoryName(executablePath),
             }))
             {
+                Log($"Direct Zoom launch succeeded with URI: {dialUri}");
                 return true;
             }
         }
 
-        return LaunchProcess(new ProcessStartInfo
+        Log("Trying plain Zoom executable launch as final fallback.");
+        var launched = LaunchProcess(new ProcessStartInfo
         {
             FileName = executablePath,
             UseShellExecute = true,
             WorkingDirectory = Path.GetDirectoryName(executablePath),
         });
+
+        Log($"Plain Zoom executable launch result: {launched}");
+        return launched;
     }
 
     private IEnumerable<string> BuildDialUris(string normalizedPhoneNumber)
@@ -160,13 +177,16 @@ public sealed class ZoomDesktopDialerClient
         foreach (var candidate in candidates.Where(x => !string.IsNullOrWhiteSpace(x)))
         {
             var normalizedPath = candidate!.Trim().Trim('"');
+            Log($"Checking Zoom executable candidate: {normalizedPath}");
             if (File.Exists(normalizedPath))
             {
                 _cachedExecutablePath = normalizedPath;
+                Log($"Using Zoom executable: {_cachedExecutablePath}");
                 return _cachedExecutablePath;
             }
         }
 
+        Log("No Zoom executable candidates were found.");
         return null;
     }
 
@@ -234,6 +254,22 @@ public sealed class ZoomDesktopDialerClient
         };
     }
 
+    private bool LaunchUriWithShellExecute(string dialUri)
+    {
+        try
+        {
+            var result = ShellExecute(IntPtr.Zero, "open", dialUri, null, null, SwRestore);
+            var code = result.ToInt64();
+            Log($"ShellExecute result for '{dialUri}' was {code}.");
+            return code > ShellExecuteSuccessThreshold;
+        }
+        catch (Exception exception)
+        {
+            Log($"ShellExecute exception for '{dialUri}': {exception.Message}");
+            return false;
+        }
+    }
+
     private static bool LaunchProcess(ProcessStartInfo startInfo)
     {
         try
@@ -263,6 +299,18 @@ public sealed class ZoomDesktopDialerClient
 
         ShowWindow(process.MainWindowHandle, SwRestore);
         SetForegroundWindow(process.MainWindowHandle);
+    }
+
+    private void Log(string message)
+    {
+        try
+        {
+            var line = $"[{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss}] {message}{Environment.NewLine}";
+            File.AppendAllText(_logPath, line);
+        }
+        catch
+        {
+        }
     }
 
     private static async Task DelayAsync(int delayMilliseconds, CancellationToken cancellationToken)
@@ -332,6 +380,15 @@ public sealed class ZoomDesktopDialerClient
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool ShowWindow(IntPtr windowHandle, int command);
+
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern IntPtr ShellExecute(
+        IntPtr hwnd,
+        string? operation,
+        string file,
+        string? parameters,
+        string? directory,
+        int showCommand);
 
     [StructLayout(LayoutKind.Sequential)]
     private struct INPUT
