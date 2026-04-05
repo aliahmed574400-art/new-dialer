@@ -24,6 +24,8 @@ public sealed class ZoomDesktopDialerClient
         _options = options;
     }
 
+    public int AutoNextDialDelayMs => _options.AutoNextDialDelayMs <= 0 ? 3000 : _options.AutoNextDialDelayMs;
+
     public async Task WarmUpAsync(CancellationToken cancellationToken)
     {
         if (!_options.LaunchZoomWithDialer || IsZoomRunning())

@@ -213,7 +213,10 @@ public sealed partial class MainWindowViewModel
         {
             if (!string.IsNullOrWhiteSpace(_currentExternalCallId))
             {
-                await SafeHangUpAsync();
+                await SafeHangUpAsync(
+                    wasAnswered: _currentLeadMarkedAnswered,
+                    requeueLead: !_currentLeadMarkedAnswered,
+                    outcomeLabel: _currentLeadMarkedAnswered ? "Answered" : "Signed out");
             }
 
             if (IsAuthenticated)

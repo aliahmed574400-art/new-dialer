@@ -1,3 +1,4 @@
+using System.Windows.Threading;
 using System.Collections.ObjectModel;
 using System.Windows.Input;
 using NewDialer.Contracts.Agents;
@@ -20,10 +21,13 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private readonly AsyncRelayCommand _resumeDialerCommand;
     private readonly AsyncRelayCommand _stopDialerCommand;
     private readonly AsyncRelayCommand _hangUpCommand;
+    private readonly AsyncRelayCommand _skipLeadCommand;
     private readonly AsyncRelayCommand _startScheduledCallCommand;
     private readonly AsyncRelayCommand _logoutCommand;
+    private readonly RelayCommand _markPickedUpCommand;
     private readonly RelayCommand _pauseDialerCommand;
     private readonly RelayCommand _toggleAuthenticationModeCommand;
+    private readonly DispatcherTimer _callDurationTimer = new() { Interval = TimeSpan.FromSeconds(1) };
 
     private SessionDto? _session;
     private ShellNavItem? _selectedNavigation;
@@ -39,8 +43,13 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private string _statusMessage = "Desktop app ready for secure workspace sign-in.";
     private string _errorMessage = string.Empty;
     private int _currentLeadIndex = -1;
+    private int _currentCallElapsedSeconds;
     private string? _currentExternalCallId;
+    private DateTimeOffset? _currentCallStartedAtUtc;
+    private CancellationTokenSource? _autoAdvanceCancellationSource;
     private bool _isBusy;
+    private bool _hasDialerSessionStarted;
+    private bool _currentLeadMarkedAnswered;
     private bool _zoomWarmupStarted;
 
     public MainWindowViewModel(NewDialerApiClient apiClient, ZoomDesktopDialerClient zoomDesktopDialerClient)
@@ -67,10 +76,13 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         _resumeDialerCommand = new AsyncRelayCommand(ResumeDialerAsync, () => CanResume);
         _stopDialerCommand = new AsyncRelayCommand(StopDialerAsync, () => CanStop);
         _hangUpCommand = new AsyncRelayCommand(HangUpAndContinueAsync, () => CanHangUp);
+        _skipLeadCommand = new AsyncRelayCommand(SkipCurrentLeadAsync, () => CanSkipLead);
         _startScheduledCallCommand = new AsyncRelayCommand(StartScheduledCallAsync, () => CanStartScheduledCall);
         _logoutCommand = new AsyncRelayCommand(SignOutAsync, () => IsAuthenticated && !IsBusy);
+        _markPickedUpCommand = new RelayCommand(MarkLeadPickedUp, () => CanMarkPickedUp);
         _pauseDialerCommand = new RelayCommand(PauseDialer, () => CanPause);
         _toggleAuthenticationModeCommand = new RelayCommand(ToggleAuthenticationMode, () => !IsBusy);
+        _callDurationTimer.Tick += OnCallDurationTimerTick;
 
         RebuildNavigation();
         RefreshDashboard();
@@ -112,6 +124,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public ICommand StopDialerCommand => _stopDialerCommand;
 
     public ICommand HangUpCommand => _hangUpCommand;
+
+    public ICommand SkipLeadCommand => _skipLeadCommand;
+
+    public ICommand MarkPickedUpCommand => _markPickedUpCommand;
 
     public ICommand StartScheduledCallCommand => _startScheduledCallCommand;
 
@@ -275,7 +291,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public bool CanStartScheduledCall => CanUseDialer && SelectedScheduledCall is not null && !IsBusy && _dialerStatus != DialerRunStatus.Running;
 
     public string QueueSummary => IsAuthenticated
-        ? $"{LeadQueue.Count(x => x.Status == "Completed")} completed / {LeadQueue.Count} loaded"
+        ? $"{AnsweredLeadCount + NoAnswerLeadCount} completed / {LeadQueue.Count} loaded"
         : "Sign in to load workspace data";
 
     public string CurrentLeadName => CurrentLead?.Name ?? "Queue ready";
@@ -325,9 +341,24 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(CanResume));
         OnPropertyChanged(nameof(CanStop));
         OnPropertyChanged(nameof(CanHangUp));
+        OnPropertyChanged(nameof(CanMarkPickedUp));
+        OnPropertyChanged(nameof(CanSkipLead));
         OnPropertyChanged(nameof(CanStartScheduledCall));
         OnPropertyChanged(nameof(CanCreateSchedule));
         OnPropertyChanged(nameof(QueueSummary));
+        OnPropertyChanged(nameof(HasDialerSessionStarted));
+        OnPropertyChanged(nameof(HasCurrentCall));
+        OnPropertyChanged(nameof(DialerBannerText));
+        OnPropertyChanged(nameof(TotalLeadCount));
+        OnPropertyChanged(nameof(AnsweredLeadCount));
+        OnPropertyChanged(nameof(NoAnswerLeadCount));
+        OnPropertyChanged(nameof(PendingLeadCount));
+        OnPropertyChanged(nameof(DialerProgressMaximum));
+        OnPropertyChanged(nameof(DialerProgressValue));
+        OnPropertyChanged(nameof(DialerProgressText));
+        OnPropertyChanged(nameof(CurrentLeadInitials));
+        OnPropertyChanged(nameof(CurrentCallPrompt));
+        OnPropertyChanged(nameof(CurrentCallElapsedDisplay));
         RaiseCommandStates();
     }
 
@@ -342,6 +373,19 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         _hangUpCommand.RaiseCanExecuteChanged();
         _startScheduledCallCommand.RaiseCanExecuteChanged();
         _logoutCommand.RaiseCanExecuteChanged();
+        _skipLeadCommand.RaiseCanExecuteChanged();
+        _markPickedUpCommand.RaiseCanExecuteChanged();
         _toggleAuthenticationModeCommand.RaiseCanExecuteChanged();
+    }
+
+    private void OnCallDurationTimerTick(object? sender, EventArgs e)
+    {
+        if (_currentCallStartedAtUtc is null || CurrentLead is null)
+        {
+            return;
+        }
+
+        _currentCallElapsedSeconds = Math.Max(0, (int)(DateTimeOffset.UtcNow - _currentCallStartedAtUtc.Value).TotalSeconds);
+        OnPropertyChanged(nameof(CurrentCallElapsedDisplay));
     }
 }

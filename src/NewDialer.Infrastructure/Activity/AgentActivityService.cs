@@ -102,7 +102,14 @@ public sealed class AgentActivityService(
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task RecordCallEndedAsync(Guid tenantId, Guid agentId, string externalCallId, CancellationToken cancellationToken)
+    public async Task RecordCallEndedAsync(
+        Guid tenantId,
+        Guid agentId,
+        string externalCallId,
+        bool wasAnswered,
+        bool requeueLead,
+        string? outcomeLabel,
+        CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(externalCallId))
         {
@@ -121,15 +128,16 @@ public sealed class AgentActivityService(
         }
 
         var nowUtc = dateTimeProvider.UtcNow;
+        var elapsedSeconds = Math.Max(0, (int)(nowUtc - attempt.StartedAtUtc).TotalSeconds);
         attempt.EndedAtUtc = nowUtc;
-        attempt.DurationSeconds = Math.Max(0, (int)(nowUtc - attempt.StartedAtUtc).TotalSeconds);
-        attempt.WasAnswered = attempt.DurationSeconds > 0;
+        attempt.DurationSeconds = wasAnswered ? elapsedSeconds : 0;
+        attempt.WasAnswered = wasAnswered;
         attempt.UpdatedAtUtc = nowUtc;
 
         if (attempt.Lead is not null)
         {
-            attempt.Lead.Status = LeadStatus.Completed;
-            attempt.Lead.LastOutcome = attempt.DurationSeconds > 0 ? "Call completed" : "Call ended";
+            attempt.Lead.Status = ResolveLeadStatus(wasAnswered, requeueLead);
+            attempt.Lead.LastOutcome = ResolveOutcomeLabel(wasAnswered, requeueLead, outcomeLabel);
             attempt.Lead.UpdatedAtUtc = nowUtc;
         }
 
@@ -229,5 +237,30 @@ public sealed class AgentActivityService(
         }
 
         return TimeZoneInfo.Utc;
+    }
+
+    private static LeadStatus ResolveLeadStatus(bool wasAnswered, bool requeueLead)
+    {
+        if (requeueLead)
+        {
+            return LeadStatus.Queued;
+        }
+
+        return wasAnswered ? LeadStatus.Completed : LeadStatus.Failed;
+    }
+
+    private static string ResolveOutcomeLabel(bool wasAnswered, bool requeueLead, string? outcomeLabel)
+    {
+        if (!string.IsNullOrWhiteSpace(outcomeLabel))
+        {
+            return outcomeLabel.Trim();
+        }
+
+        if (requeueLead)
+        {
+            return "Skipped";
+        }
+
+        return wasAnswered ? "Answered" : "No answer";
     }
 }

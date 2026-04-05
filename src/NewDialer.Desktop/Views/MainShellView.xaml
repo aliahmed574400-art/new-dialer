@@ -105,43 +105,123 @@
           </Border>
         </StackPanel>
         <StackPanel Visibility="{Binding SelectedSection, Converter={StaticResource SectionToVisibilityConverter}, ConverterParameter=Dialer}">
-          <Grid>
-            <Grid.ColumnDefinitions><ColumnDefinition Width="1.15*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-            <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}" Margin="0,0,16,16">
+          <Border Background="#FF0D1527" BorderBrush="#FF173150" BorderThickness="1" CornerRadius="18" Padding="20" Margin="0,0,0,16">
+            <TextBlock Text="{Binding DialerBannerText}" Foreground="#FF76FFD2" FontFamily="Consolas" FontSize="14" TextWrapping="Wrap" />
+          </Border>
+          <UniformGrid Columns="4" Margin="0,0,0,16">
+            <Border Margin="0,0,14,0" Background="#FF111C31" BorderBrush="#FF1A2B45" BorderThickness="1" CornerRadius="18" Padding="20">
               <StackPanel>
-                <TextBlock Text="Dialer Console" FontFamily="Bahnschrift SemiBold" FontSize="24" Foreground="{StaticResource InkBrush}" />
-                <TextBlock Text="{Binding DialerStatusText}" Margin="0,8,0,0" Foreground="{StaticResource AccentBrush}" FontWeight="SemiBold" />
-                <TextBlock Text="Zoom Workplace is controlled locally from this PC. Start Dialer launches the registered Zoom phone protocol, and Hang Up sends Zoom&apos;s default End current call shortcut. For fully automatic dialing, enable Zoom&apos;s Automatically Call From 3rd Party Apps setting and approve user consent in Zoom." Margin="0,10,0,0" Foreground="{StaticResource MutedInkBrush}" TextWrapping="Wrap" />
-                <Grid Margin="0,18,0,0">
-                  <Grid.ColumnDefinitions><ColumnDefinition Width="150" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                  <Grid.RowDefinitions><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /></Grid.RowDefinitions>
-                  <TextBlock Text="Name" Foreground="{StaticResource MutedInkBrush}" /><TextBlock Grid.Column="1" Text="{Binding CurrentLeadName}" Foreground="{StaticResource InkBrush}" FontWeight="SemiBold" />
-                  <TextBlock Grid.Row="1" Text="Email" Foreground="{StaticResource MutedInkBrush}" Margin="0,10,0,0" /><TextBlock Grid.Row="1" Grid.Column="1" Margin="0,10,0,0" Text="{Binding CurrentLeadEmail}" Foreground="{StaticResource InkBrush}" />
-                  <TextBlock Grid.Row="2" Text="Phone" Foreground="{StaticResource MutedInkBrush}" Margin="0,10,0,0" /><TextBlock Grid.Row="2" Grid.Column="1" Margin="0,10,0,0" Text="{Binding CurrentLeadPhoneNumber}" Foreground="{StaticResource InkBrush}" />
-                  <TextBlock Grid.Row="3" Text="Website" Foreground="{StaticResource MutedInkBrush}" Margin="0,10,0,0" /><TextBlock Grid.Row="3" Grid.Column="1" Margin="0,10,0,0" Text="{Binding CurrentLeadWebsite}" Foreground="{StaticResource InkBrush}" />
-                  <TextBlock Grid.Row="4" Text="Service" Foreground="{StaticResource MutedInkBrush}" Margin="0,10,0,0" /><TextBlock Grid.Row="4" Grid.Column="1" Margin="0,10,0,0" Text="{Binding CurrentLeadService}" Foreground="{StaticResource InkBrush}" />
-                  <TextBlock Grid.Row="5" Text="Budget" Foreground="{StaticResource MutedInkBrush}" Margin="0,10,0,0" /><TextBlock Grid.Row="5" Grid.Column="1" Margin="0,10,0,0" Text="{Binding CurrentLeadBudget}" Foreground="{StaticResource InkBrush}" FontWeight="SemiBold" />
-                </Grid>
-                <WrapPanel Margin="0,24,0,0">
-                  <Button Content="Start Dialer" Style="{StaticResource PrimaryButtonStyle}" Command="{Binding StartDialerCommand}" IsEnabled="{Binding CanStart}" />
-                  <Button Content="Hang Up" Style="{StaticResource SecondaryButtonStyle}" Command="{Binding HangUpCommand}" Visibility="{Binding CanHangUp, Converter={StaticResource BoolToVis}}" />
-                  <Button Content="Pause" Style="{StaticResource SecondaryButtonStyle}" Command="{Binding PauseDialerCommand}" Visibility="{Binding CanPause, Converter={StaticResource BoolToVis}}" />
-                  <Button Content="Resume" Style="{StaticResource SecondaryButtonStyle}" Command="{Binding ResumeDialerCommand}" Visibility="{Binding CanResume, Converter={StaticResource BoolToVis}}" />
-                  <Button Content="Stop" Style="{StaticResource SecondaryButtonStyle}" Command="{Binding StopDialerCommand}" IsEnabled="{Binding CanStop}" />
-                  <Button Content="Schedule Call" Style="{StaticResource SecondaryButtonStyle}" Click="ScheduleLead_Click" IsEnabled="{Binding CanCreateSchedule}" />
-                </WrapPanel>
+                <TextBlock Text="TOTAL LEADS" Foreground="#FF7282A0" FontSize="11" FontFamily="Consolas" />
+                <TextBlock Text="{Binding TotalLeadCount}" Margin="0,12,0,0" FontFamily="Bahnschrift SemiBold" FontSize="34" Foreground="#FF14C8FF" />
               </StackPanel>
             </Border>
-            <Border Grid.Column="1" Style="{StaticResource CardBorderStyle}">
+            <Border Margin="0,0,14,0" Background="#FF111C31" BorderBrush="#FF1A2B45" BorderThickness="1" CornerRadius="18" Padding="20">
               <StackPanel>
-                <TextBlock Text="Active Queue" FontFamily="Bahnschrift SemiBold" FontSize="24" Foreground="{StaticResource InkBrush}" />
-                <TextBlock Text="Clipboard copy is disabled for safer agent operation." Margin="0,8,0,18" Foreground="{StaticResource MutedInkBrush}" TextWrapping="Wrap" />
-                <DataGrid ItemsSource="{Binding LeadQueue}" SelectedItem="{Binding SelectedLead}" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False" CanUserResizeRows="False" IsReadOnly="True" ClipboardCopyMode="None" RowHeaderWidth="0">
+                <TextBlock Text="ANSWERED" Foreground="#FF7282A0" FontSize="11" FontFamily="Consolas" />
+                <TextBlock Text="{Binding AnsweredLeadCount}" Margin="0,12,0,0" FontFamily="Bahnschrift SemiBold" FontSize="34" Foreground="#FF1CFFAC" />
+              </StackPanel>
+            </Border>
+            <Border Margin="0,0,14,0" Background="#FF111C31" BorderBrush="#FF1A2B45" BorderThickness="1" CornerRadius="18" Padding="20">
+              <StackPanel>
+                <TextBlock Text="NO ANSWER" Foreground="#FF7282A0" FontSize="11" FontFamily="Consolas" />
+                <TextBlock Text="{Binding NoAnswerLeadCount}" Margin="0,12,0,0" FontFamily="Bahnschrift SemiBold" FontSize="34" Foreground="#FFFF5C7B" />
+              </StackPanel>
+            </Border>
+            <Border Background="#FF111C31" BorderBrush="#FF1A2B45" BorderThickness="1" CornerRadius="18" Padding="20">
+              <StackPanel>
+                <TextBlock Text="PENDING" Foreground="#FF7282A0" FontSize="11" FontFamily="Consolas" />
+                <TextBlock Text="{Binding PendingLeadCount}" Margin="0,12,0,0" FontFamily="Bahnschrift SemiBold" FontSize="34" Foreground="#FFFFBF3A" />
+              </StackPanel>
+            </Border>
+          </UniformGrid>
+          <Grid>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="420" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+            <Border Grid.Column="0" Background="#FF101B30" BorderBrush="#FF0F8ACB" BorderThickness="1" CornerRadius="22" Padding="0" Margin="0,0,18,16">
+              <StackPanel>
+                <Border Background="#FF13253E" CornerRadius="22,22,0,0" Padding="18,16">
+                  <TextBlock Text="Auto Dialer Control" FontFamily="Bahnschrift SemiBold" FontSize="24" Foreground="#FFF5FBFF" />
+                </Border>
+                <StackPanel Margin="24">
+                  <Border Width="108" Height="108" CornerRadius="54" Background="#FF11D9C1" BorderBrush="#FF166B82" BorderThickness="3" HorizontalAlignment="Center">
+                    <TextBlock Text="{Binding CurrentLeadInitials}" HorizontalAlignment="Center" VerticalAlignment="Center" FontFamily="Bahnschrift SemiBold" FontSize="34" Foreground="#FF041723" />
+                  </Border>
+                  <TextBlock Text="{Binding CurrentLeadName}" Margin="0,20,0,0" HorizontalAlignment="Center" TextAlignment="Center" FontFamily="Bahnschrift SemiBold" FontSize="28" Foreground="White" TextWrapping="Wrap" />
+                  <TextBlock Text="{Binding CurrentLeadPhoneNumber}" Margin="0,8,0,0" HorizontalAlignment="Center" FontFamily="Consolas" FontSize="24" Foreground="#FF19D9FF" />
+                  <TextBlock Text="{Binding CurrentLeadService}" Margin="0,8,0,0" HorizontalAlignment="Center" TextAlignment="Center" FontFamily="Consolas" FontSize="16" Foreground="#FF8FA5C0" TextWrapping="Wrap" />
+                  <TextBlock Text="{Binding CurrentCallPrompt}" Margin="0,24,0,0" HorizontalAlignment="Center" TextAlignment="Center" FontFamily="Consolas" FontSize="15" Foreground="#FF7E8DA9" TextWrapping="Wrap" />
+                  <TextBlock Text="{Binding CurrentCallElapsedDisplay}" Margin="0,16,0,0" HorizontalAlignment="Center" FontFamily="Bahnschrift SemiBold" FontSize="34" Foreground="#FF1CFFAC" />
+                  <Grid Margin="0,20,0,0">
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*" />
+                      <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Progress" Foreground="#FF7E8DA9" FontFamily="Consolas" FontSize="13" />
+                    <TextBlock Grid.Column="1" Text="{Binding DialerProgressText}" Foreground="#FF9FD6E8" FontFamily="Consolas" FontSize="13" />
+                  </Grid>
+                  <ProgressBar Margin="0,10,0,0" Height="8" Maximum="{Binding DialerProgressMaximum}" Value="{Binding DialerProgressValue}" Foreground="#FF12D7FF" Background="#FF1B2941" />
+                  <Button Content="Start Dialing" Style="{StaticResource PrimaryButtonStyle}" Command="{Binding StartDialerCommand}" IsEnabled="{Binding CanStart}" Margin="0,26,0,0" Padding="18,14" FontSize="22" />
+                  <Button Content="Picked Up" Style="{StaticResource PrimaryButtonStyle}" Command="{Binding MarkPickedUpCommand}" IsEnabled="{Binding CanMarkPickedUp}" Visibility="{Binding HasCurrentCall, Converter={StaticResource BoolToVis}}" Margin="0,14,0,0" Padding="18,14" FontSize="20" Background="#FF13D867" />
+                  <Button Content="Hang Up" Style="{StaticResource PrimaryButtonStyle}" Command="{Binding HangUpCommand}" IsEnabled="{Binding CanHangUp}" Visibility="{Binding HasCurrentCall, Converter={StaticResource BoolToVis}}" Margin="0,12,0,0" Padding="18,14" FontSize="20" Background="#FFFF4268" />
+                  <Grid Margin="0,12,0,0" Visibility="{Binding HasCurrentCall, Converter={StaticResource BoolToVis}}">
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*" />
+                      <ColumnDefinition Width="14" />
+                      <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Button Grid.Column="0" Content="Skip" Style="{StaticResource SecondaryButtonStyle}" Command="{Binding SkipLeadCommand}" IsEnabled="{Binding CanSkipLead}" Padding="18,12" FontSize="18" Background="#FF1B2740" Foreground="#FFFFD15C" />
+                    <Button Grid.Column="2" Content="Pause" Style="{StaticResource SecondaryButtonStyle}" Command="{Binding PauseDialerCommand}" IsEnabled="{Binding CanPause}" Padding="18,12" FontSize="18" Background="#FF1B2740" Foreground="#FF18D8FF" />
+                  </Grid>
+                  <Button Content="Resume" Style="{StaticResource SecondaryButtonStyle}" Command="{Binding ResumeDialerCommand}" IsEnabled="{Binding CanResume}" Margin="0,12,0,0" Padding="18,12" FontSize="18" Background="#FF1B2740" Foreground="#FF18D8FF" />
+                  <Button Content="Stop" Style="{StaticResource PrimaryButtonStyle}" Command="{Binding StopDialerCommand}" IsEnabled="{Binding CanStop}" Margin="0,12,0,0" Padding="18,14" FontSize="20" Background="#FFEF3B5D" />
+                  <Button Content="Schedule Call" Style="{StaticResource SecondaryButtonStyle}" Click="ScheduleLead_Click" IsEnabled="{Binding CanCreateSchedule}" Margin="0,12,0,0" Padding="18,12" FontSize="18" />
+                </StackPanel>
+              </StackPanel>
+            </Border>
+            <Border Grid.Column="1" Background="#FF111B2F" BorderBrush="#FF1A2B45" BorderThickness="1" CornerRadius="22" Padding="0" Margin="0,0,0,16">
+              <StackPanel>
+                <Border Background="#FF162238" CornerRadius="22,22,0,0" Padding="18,16">
+                  <Grid>
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*" />
+                      <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Lead Queue" FontFamily="Bahnschrift SemiBold" FontSize="24" Foreground="#FFF5FBFF" />
+                    <TextBlock Grid.Column="1" Text="{Binding TotalLeadCount}" Foreground="#FF7282A0" FontFamily="Consolas" FontSize="16" VerticalAlignment="Center" />
+                  </Grid>
+                </Border>
+                <TextBlock Text="Assigned leads are dialed automatically from Zoom Workplace. Clipboard copy stays disabled in agent mode." Margin="20,18,20,16" Foreground="#FF8FA5C0" TextWrapping="Wrap" />
+                <DataGrid ItemsSource="{Binding LeadQueue}" SelectedItem="{Binding SelectedLead}" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False" CanUserResizeRows="False" IsReadOnly="True" ClipboardCopyMode="None" RowHeaderWidth="0" Background="#FF111B2F" BorderThickness="0" Foreground="White" HeadersVisibility="Column" Margin="18,0,18,18">
+                  <DataGrid.Resources>
+                    <Style TargetType="DataGridColumnHeader">
+                      <Setter Property="Background" Value="#FF1A2438" />
+                      <Setter Property="Foreground" Value="#FF7282A0" />
+                      <Setter Property="FontFamily" Value="Consolas" />
+                      <Setter Property="BorderBrush" Value="#FF1A2438" />
+                    </Style>
+                    <Style TargetType="DataGridRow">
+                      <Setter Property="Background" Value="#FF111B2F" />
+                      <Setter Property="Foreground" Value="White" />
+                      <Setter Property="BorderBrush" Value="#FF1A2438" />
+                      <Setter Property="BorderThickness" Value="0,0,0,1" />
+                      <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsCurrent}" Value="True">
+                          <Setter Property="Background" Value="#FF12364C" />
+                        </DataTrigger>
+                      </Style.Triggers>
+                    </Style>
+                    <Style TargetType="DataGridCell">
+                      <Setter Property="Background" Value="Transparent" />
+                      <Setter Property="BorderThickness" Value="0" />
+                      <Setter Property="Foreground" Value="White" />
+                    </Style>
+                  </DataGrid.Resources>
                   <DataGrid.Columns>
-                    <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*" />
-                    <DataGridTextColumn Header="Phone" Binding="{Binding PhoneNumber}" Width="*" />
-                    <DataGridTextColumn Header="Service" Binding="{Binding Service}" Width="*" />
-                    <DataGridTextColumn Header="Budget" Binding="{Binding Budget}" Width="110" />
+                    <DataGridTextColumn Header="#" Binding="{Binding QueueNumber}" Width="50" />
+                    <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="1.2*" />
+                    <DataGridTextColumn Header="Contact Number" Binding="{Binding PhoneNumber}" Width="1.1*" />
+                    <DataGridTextColumn Header="Email" Binding="{Binding Email}" Width="1.3*" />
+                    <DataGridTextColumn Header="Service" Binding="{Binding Service}" Width="1.1*" />
+                    <DataGridTextColumn Header="Website" Binding="{Binding Website}" Width="1.1*" />
                     <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="130" />
                   </DataGrid.Columns>
                 </DataGrid>

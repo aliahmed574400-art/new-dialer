@@ -18,6 +18,8 @@ public sealed class DesktopAppOptions
 
     public int ZoomActionDelayMs { get; init; } = 200;
 
+    public int AutoNextDialDelayMs { get; init; } = 3000;
+
     public string? ZoomExecutablePath { get; init; }
 
     public static DesktopAppOptions Load()
@@ -42,6 +44,7 @@ public sealed class DesktopAppOptions
                     ZoomUriScheme = ReadString(desktopSection, "ZoomUriScheme") ?? DefaultZoomUriScheme,
                     ZoomLaunchDelayMs = ReadInt32(desktopSection, "ZoomLaunchDelayMs", defaultValue: 2500),
                     ZoomActionDelayMs = ReadInt32(desktopSection, "ZoomActionDelayMs", defaultValue: 200),
+                    AutoNextDialDelayMs = ReadInt32(desktopSection, "AutoNextDialDelayMs", defaultValue: 3000),
                     ZoomExecutablePath = ReadString(desktopSection, "ZoomExecutablePath"),
                 };
             }

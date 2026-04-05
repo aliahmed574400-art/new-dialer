@@ -11,12 +11,12 @@ public sealed partial class MainWindowViewModel
 {
     public string DialerStatusText => _dialerStatus switch
     {
-        DialerRunStatus.Idle => "Idle",
-        DialerRunStatus.Running => "Dialing through Zoom Workplace",
-        DialerRunStatus.Paused => "Paused after current conversation",
+        DialerRunStatus.Idle => "Ready to dial",
+        DialerRunStatus.Running => _currentLeadMarkedAnswered ? "Connected in Zoom Workplace" : "Dialing through Zoom Workplace",
+        DialerRunStatus.Paused => "Paused after the current lead",
         DialerRunStatus.Stopped => "Stopped manually",
         DialerRunStatus.Completed => "Queue completed",
-        _ => "Idle",
+        _ => "Ready to dial",
     };
 
     public bool CanStart => CanUseDialer
@@ -31,6 +31,42 @@ public sealed partial class MainWindowViewModel
     public bool CanStop => CanUseDialer && !IsBusy && (_dialerStatus is DialerRunStatus.Running or DialerRunStatus.Paused || !string.IsNullOrWhiteSpace(_currentExternalCallId));
 
     public bool CanHangUp => CanUseDialer && !IsBusy && CurrentLead is not null && !string.IsNullOrWhiteSpace(_currentExternalCallId) && (_dialerStatus is DialerRunStatus.Running or DialerRunStatus.Paused);
+
+    public bool CanMarkPickedUp => CanUseDialer && !IsBusy && CurrentLead is not null && !string.IsNullOrWhiteSpace(_currentExternalCallId) && !_currentLeadMarkedAnswered;
+
+    public bool CanSkipLead => CanUseDialer && !IsBusy && CurrentLead is not null && !string.IsNullOrWhiteSpace(_currentExternalCallId);
+
+    public bool HasDialerSessionStarted => _hasDialerSessionStarted || _dialerStatus is DialerRunStatus.Running or DialerRunStatus.Paused or DialerRunStatus.Stopped or DialerRunStatus.Completed;
+
+    public bool HasCurrentCall => CurrentLead is not null;
+
+    public string DialerBannerText => "Zoom Workplace runs locally on this PC. Start Dialing opens Zoom Phone, Hang Up ends the current call, and the next lead starts after 3 seconds.";
+
+    public int TotalLeadCount => LeadQueue.Count;
+
+    public int AnsweredLeadCount => LeadQueue.Count(x => x.QueueState == DialerLeadQueueState.Answered);
+
+    public int NoAnswerLeadCount => LeadQueue.Count(x => x.QueueState == DialerLeadQueueState.NoAnswer);
+
+    public int PendingLeadCount => LeadQueue.Count(x => x.QueueState is DialerLeadQueueState.Pending or DialerLeadQueueState.Scheduled);
+
+    public double DialerProgressMaximum => Math.Max(LeadQueue.Count, 1);
+
+    public double DialerProgressValue => CurrentLead is null
+        ? Math.Min(_currentLeadIndex + 1, LeadQueue.Count)
+        : _currentLeadIndex + 1;
+
+    public string DialerProgressText => $"{Math.Max(Math.Min(_currentLeadIndex + 1, LeadQueue.Count), CurrentLead is null ? 0 : 1)} / {LeadQueue.Count}";
+
+    public string CurrentLeadInitials => CurrentLead?.Initials ?? "ND";
+
+    public string CurrentCallPrompt => CurrentLead is null
+        ? "Press Start Dialing to begin with the next assigned lead."
+        : _currentLeadMarkedAnswered
+            ? "Connected in Zoom. Finish the conversation, then press Hang Up."
+            : "Ringing in Zoom Workplace. If they answer, press Picked Up.";
+
+    public string CurrentCallElapsedDisplay => TimeSpan.FromSeconds(_currentCallElapsedSeconds).ToString(@"mm\:ss");
 
     private async Task RefreshWorkspaceAsync()
     {
@@ -65,6 +101,12 @@ public sealed partial class MainWindowViewModel
         _dialerStatus = DialerRunStatus.Idle;
         _currentExternalCallId = null;
         _currentLeadIndex = -1;
+        _currentCallStartedAtUtc = null;
+        _currentCallElapsedSeconds = 0;
+        _currentLeadMarkedAnswered = false;
+        _hasDialerSessionStarted = false;
+        CancelAutoAdvance();
+        StopCallDurationTimer();
         _zoomWarmupStarted = false;
         CurrentLead = null;
         RefreshRoleContext();
@@ -93,6 +135,12 @@ public sealed partial class MainWindowViewModel
         CurrentLead = null;
         _currentLeadIndex = -1;
         _currentExternalCallId = null;
+        _currentCallStartedAtUtc = null;
+        _currentCallElapsedSeconds = 0;
+        _currentLeadMarkedAnswered = false;
+        _hasDialerSessionStarted = false;
+        CancelAutoAdvance();
+        StopCallDurationTimer();
         _dialerStatus = DialerRunStatus.Idle;
 
         if (!IsAuthenticated || !CanViewData)
@@ -183,7 +231,7 @@ public sealed partial class MainWindowViewModel
                 CancellationToken.None);
 
             ScheduledCalls.Insert(0, MapSchedule(schedule));
-            CurrentLead.Status = "Follow Up Scheduled";
+            CurrentLead.QueueState = DialerLeadQueueState.Scheduled;
             SelectedScheduledCall = ScheduledCalls[0];
             RefreshDashboard();
             StatusMessage = $"Callback saved for {CurrentLead.Name}.";
@@ -204,14 +252,15 @@ public sealed partial class MainWindowViewModel
     {
         LeadQueue.Clear();
         AdminAssignableLeads.Clear();
+        var queueNumber = 1;
         foreach (var lead in leads)
         {
-            var row = MapLeadRow(lead, useAgentStatusLabels: false);
+            var row = MapLeadRow(lead, useAgentStatusLabels: false, queueNumber++);
             LeadQueue.Add(row);
 
             if (lead.AssignedAgentId is null)
             {
-                AdminAssignableLeads.Add(MapLeadRow(lead, useAgentStatusLabels: false));
+                AdminAssignableLeads.Add(MapLeadRow(lead, useAgentStatusLabels: false, queueNumber: 0));
             }
         }
     }
@@ -336,7 +385,7 @@ public sealed partial class MainWindowViewModel
         }
 
         DashboardCards.Add(new MetricCard { Title = IsAgent ? "Assigned Leads" : "Workspace Leads", Value = LeadQueue.Count.ToString(), Subtitle = "Visible in the current queue" });
-        DashboardCards.Add(new MetricCard { Title = "Ready To Dial", Value = LeadQueue.Count(CanLeadBeDialed).ToString(), Subtitle = "Queued, new, failed, or scheduled callbacks" });
+        DashboardCards.Add(new MetricCard { Title = "Ready To Dial", Value = LeadQueue.Count(CanLeadBeDialed).ToString(), Subtitle = "Pending, missed, or scheduled callbacks" });
         DashboardCards.Add(new MetricCard { Title = "Scheduled", Value = ScheduledCalls.Count.ToString(), Subtitle = "Callbacks saved in PostgreSQL" });
         DashboardCards.Add(new MetricCard { Title = "Access", Value = AccessModeLabel, Subtitle = SubscriptionSummary });
     }
@@ -364,6 +413,12 @@ public sealed partial class MainWindowViewModel
         CurrentLead = null;
         _currentLeadIndex = -1;
         _currentExternalCallId = null;
+        _currentCallStartedAtUtc = null;
+        _currentCallElapsedSeconds = 0;
+        _currentLeadMarkedAnswered = false;
+        _hasDialerSessionStarted = false;
+        CancelAutoAdvance();
+        StopCallDurationTimer();
         _dialerStatus = DialerRunStatus.Idle;
         _zoomWarmupStarted = false;
         RefreshRoleContext();
@@ -418,14 +473,14 @@ public sealed partial class MainWindowViewModel
     {
         return status switch
         {
-            LeadStatus.New => "New",
-            LeadStatus.Queued => "Queued",
-            LeadStatus.Dialing => "Dialing",
-            LeadStatus.Completed => "Completed",
-            LeadStatus.FollowUpScheduled => "Follow Up Scheduled",
+            LeadStatus.New => "Pending",
+            LeadStatus.Queued => "Pending",
+            LeadStatus.Dialing => "Calling",
+            LeadStatus.Completed => "Answered",
+            LeadStatus.FollowUpScheduled => "Scheduled",
             LeadStatus.DoNotCall => "Do Not Call",
-            LeadStatus.Failed => "Failed",
-            _ => "Queued",
+            LeadStatus.Failed => "No Answer",
+            _ => "Pending",
         };
     }
 
@@ -444,11 +499,12 @@ public sealed partial class MainWindowViewModel
         };
     }
 
-    private static DialerLeadRow MapLeadRow(LeadDto lead, bool useAgentStatusLabels)
+    private static DialerLeadRow MapLeadRow(LeadDto lead, bool useAgentStatusLabels, int queueNumber)
     {
         return new DialerLeadRow
         {
             Id = lead.Id,
+            QueueNumber = queueNumber,
             Name = lead.Name,
             Email = lead.Email,
             PhoneNumber = lead.PhoneNumber,
@@ -456,12 +512,51 @@ public sealed partial class MainWindowViewModel
             Service = lead.Service,
             Budget = lead.Budget,
             AssignedAgentName = lead.AssignedAgentName,
-            Status = useAgentStatusLabels ? MapAgentSheetStatus(lead.Status) : MapLeadStatus(lead.Status),
+            QueueState = MapLeadQueueState(lead.Status),
+            StatusLabelOverride = useAgentStatusLabels ? MapAgentSheetStatus(lead.Status) : null,
         };
     }
 
     private static bool CanLeadBeDialed(DialerLeadRow lead)
     {
-        return lead.Status is "New" or "Queued" or "Follow Up Scheduled" or "Failed";
+        return lead.QueueState is DialerLeadQueueState.Pending or DialerLeadQueueState.Scheduled or DialerLeadQueueState.NoAnswer;
+    }
+
+    private static DialerLeadQueueState MapLeadQueueState(LeadStatus status)
+    {
+        return status switch
+        {
+            LeadStatus.New => DialerLeadQueueState.Pending,
+            LeadStatus.Queued => DialerLeadQueueState.Pending,
+            LeadStatus.Dialing => DialerLeadQueueState.Calling,
+            LeadStatus.Completed => DialerLeadQueueState.Answered,
+            LeadStatus.FollowUpScheduled => DialerLeadQueueState.Scheduled,
+            LeadStatus.DoNotCall => DialerLeadQueueState.DoNotCall,
+            LeadStatus.Failed => DialerLeadQueueState.NoAnswer,
+            _ => DialerLeadQueueState.Pending,
+        };
+    }
+
+    private void StopCallDurationTimer()
+    {
+        _callDurationTimer.Stop();
+        _currentCallStartedAtUtc = null;
+        _currentCallElapsedSeconds = 0;
+        OnPropertyChanged(nameof(CurrentCallElapsedDisplay));
+    }
+
+    private void StartCallDurationTimer()
+    {
+        _currentCallStartedAtUtc = DateTimeOffset.UtcNow;
+        _currentCallElapsedSeconds = 0;
+        OnPropertyChanged(nameof(CurrentCallElapsedDisplay));
+        _callDurationTimer.Start();
+    }
+
+    private void CancelAutoAdvance()
+    {
+        _autoAdvanceCancellationSource?.Cancel();
+        _autoAdvanceCancellationSource?.Dispose();
+        _autoAdvanceCancellationSource = null;
     }
 }

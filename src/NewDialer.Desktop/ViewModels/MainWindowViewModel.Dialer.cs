@@ -13,45 +13,61 @@ public sealed partial class MainWindowViewModel
             : GetNextCallableLead();
     }
 
-    private DialerLeadRow? GetNextCallableLead()
+    private DialerLeadRow? GetNextCallableLead(Guid? excludedLeadId = null)
     {
         if (_currentLeadIndex < 0)
         {
-            return LeadQueue.FirstOrDefault(CanLeadBeDialed);
+            return LeadQueue.FirstOrDefault(x => CanLeadBeDialed(x) && x.Id != excludedLeadId);
         }
 
-        return LeadQueue.Skip(_currentLeadIndex + 1).FirstOrDefault(CanLeadBeDialed)
-            ?? LeadQueue.FirstOrDefault(CanLeadBeDialed);
+        return LeadQueue.Skip(_currentLeadIndex + 1).FirstOrDefault(x => CanLeadBeDialed(x) && x.Id != excludedLeadId)
+            ?? LeadQueue.Take(_currentLeadIndex + 1).FirstOrDefault(x => CanLeadBeDialed(x) && x.Id != excludedLeadId);
     }
 
     private void SetCurrentLead(DialerLeadRow nextLead)
     {
-        foreach (var lead in LeadQueue.Where(x => x.Status == "Dialing"))
+        foreach (var lead in LeadQueue.Where(x => x.IsCurrent))
         {
-            lead.Status = "Queued";
+            lead.IsCurrent = false;
+            if (lead.QueueState == DialerLeadQueueState.Calling)
+            {
+                lead.QueueState = DialerLeadQueueState.Pending;
+            }
         }
 
-        nextLead.Status = "Dialing";
+        _currentLeadMarkedAnswered = false;
+        nextLead.StatusLabelOverride = null;
+        nextLead.QueueState = DialerLeadQueueState.Calling;
+        nextLead.IsCurrent = true;
         CurrentLead = nextLead;
         SelectedLead = nextLead;
         _currentLeadIndex = LeadQueue.IndexOf(nextLead);
+        _hasDialerSessionStarted = true;
+        StartCallDurationTimer();
         RefreshDashboard();
+        RaiseDialerStateChanged();
     }
 
     private async Task StartDialerAsync()
     {
+        _hasDialerSessionStarted = true;
+        RaiseDialerStateChanged();
         await StartLeadAsync(GetPreferredLeadForStart());
     }
 
     private void PauseDialer()
     {
         _dialerStatus = DialerRunStatus.Paused;
-        StatusMessage = CurrentLead is null ? "Dialer paused." : "Dialer paused. The next lead will wait until resume.";
+        StatusMessage = CurrentLead is null
+            ? "Dialer paused."
+            : "Dialer paused. Finish the current lead, then resume when you are ready.";
         RaiseDialerStateChanged();
     }
 
     private async Task ResumeDialerAsync()
     {
+        CancelAutoAdvance();
+
         if (CurrentLead is not null)
         {
             _dialerStatus = DialerRunStatus.Running;
@@ -67,32 +83,59 @@ public sealed partial class MainWindowViewModel
 
     private async Task StopDialerAsync()
     {
+        CancelAutoAdvance();
         SetBusy(true);
         ClearMessages();
         StatusMessage = "Stopping dialer...";
 
         try
         {
-            if (!string.IsNullOrWhiteSpace(_currentExternalCallId))
+            if (CurrentLead is not null && !string.IsNullOrWhiteSpace(_currentExternalCallId))
             {
-                await SafeHangUpAsync();
+                var preserveAnsweredState = _currentLeadMarkedAnswered;
+                await SafeHangUpAsync(
+                    wasAnswered: preserveAnsweredState,
+                    requeueLead: !preserveAnsweredState,
+                    outcomeLabel: preserveAnsweredState ? "Answered" : "Stopped");
+
+                if (preserveAnsweredState)
+                {
+                    CurrentLead.QueueState = DialerLeadQueueState.Answered;
+                }
+                else
+                {
+                    RequeueLead(CurrentLead);
+                }
+
+                CurrentLead.IsCurrent = false;
             }
 
-            if (CurrentLead is not null && CurrentLead.Status == "Dialing")
-            {
-                CurrentLead.Status = "Completed";
-            }
-
+            StopCallDurationTimer();
             CurrentLead = null;
+            _currentLeadMarkedAnswered = false;
             _currentLeadIndex = -1;
             _dialerStatus = DialerRunStatus.Stopped;
             StatusMessage = "Dialer stopped.";
+            RefreshDashboard();
             RaiseDialerStateChanged();
         }
         finally
         {
             SetBusy(false);
         }
+    }
+
+    private void MarkLeadPickedUp()
+    {
+        if (CurrentLead is null)
+        {
+            return;
+        }
+
+        _currentLeadMarkedAnswered = true;
+        CurrentLead.QueueState = DialerLeadQueueState.Answered;
+        StatusMessage = $"{CurrentLead.Name} marked as picked up. Press Hang Up when the Zoom conversation is finished.";
+        RaiseDialerStateChanged();
     }
 
     private async Task HangUpAndContinueAsync()
@@ -104,29 +147,41 @@ public sealed partial class MainWindowViewModel
 
         var finishedLead = CurrentLead;
         var wasPaused = _dialerStatus == DialerRunStatus.Paused;
-        DialerLeadRow? nextLead = null;
+        var wasAnswered = _currentLeadMarkedAnswered;
+        var nextLead = default(DialerLeadRow);
 
         SetBusy(true);
         ClearMessages();
-        StatusMessage = $"Ending call for {finishedLead.Name}...";
+        StatusMessage = wasAnswered
+            ? $"Ending answered call for {finishedLead.Name}..."
+            : $"Hanging up {finishedLead.Name} as no answer...";
 
         try
         {
-            await SafeHangUpAsync();
-            finishedLead.Status = "Completed";
+            await SafeHangUpAsync(
+                wasAnswered: wasAnswered,
+                requeueLead: false,
+                outcomeLabel: wasAnswered ? "Answered" : "No answer");
+
+            finishedLead.QueueState = wasAnswered ? DialerLeadQueueState.Answered : DialerLeadQueueState.NoAnswer;
+            finishedLead.IsCurrent = false;
+            StopCallDurationTimer();
             CurrentLead = null;
+            _currentLeadMarkedAnswered = false;
             RefreshDashboard();
 
             if (wasPaused)
             {
                 _dialerStatus = DialerRunStatus.Paused;
-                StatusMessage = $"Call ended for {finishedLead.Name}.";
+                StatusMessage = $"{finishedLead.Name} finished. Dialer is paused.";
             }
             else
             {
-                nextLead = GetNextCallableLead();
+                nextLead = GetNextCallableLead(finishedLead.Id);
                 _dialerStatus = nextLead is null ? DialerRunStatus.Completed : DialerRunStatus.Running;
-                StatusMessage = nextLead is null ? $"Call ended for {finishedLead.Name}. Queue completed." : StatusMessage;
+                StatusMessage = nextLead is null
+                    ? $"Call ended for {finishedLead.Name}. Queue completed."
+                    : $"{finishedLead.Name} marked as {(wasAnswered ? "answered" : "no answer")}. Next call starts in 3 seconds.";
             }
 
             RaiseDialerStateChanged();
@@ -138,8 +193,55 @@ public sealed partial class MainWindowViewModel
 
         if (!wasPaused && nextLead is not null)
         {
-            await StartLeadAsync(nextLead);
+            await WaitForNextLeadAndStartAsync(nextLead);
         }
+    }
+
+    private async Task SkipCurrentLeadAsync()
+    {
+        if (CurrentLead is null || string.IsNullOrWhiteSpace(_currentExternalCallId))
+        {
+            return;
+        }
+
+        var skippedLead = CurrentLead;
+        SetBusy(true);
+        ClearMessages();
+        StatusMessage = $"Skipping {skippedLead.Name}...";
+
+        try
+        {
+            await SafeHangUpAsync(
+                wasAnswered: false,
+                requeueLead: true,
+                outcomeLabel: "Skipped");
+
+            skippedLead.IsCurrent = false;
+            RequeueLead(skippedLead);
+            StopCallDurationTimer();
+            CurrentLead = null;
+            _currentLeadMarkedAnswered = false;
+            _dialerStatus = DialerRunStatus.Running;
+            RefreshDashboard();
+            RaiseDialerStateChanged();
+        }
+        finally
+        {
+            SetBusy(false);
+        }
+
+        var nextLead = GetNextCallableLead(skippedLead.Id);
+        if (nextLead is null)
+        {
+            _dialerStatus = DialerRunStatus.Completed;
+            StatusMessage = "No other callable leads are available in the queue.";
+            RaiseDialerStateChanged();
+            return;
+        }
+
+        StatusMessage = $"{skippedLead.Name} moved to the end of the queue. Next call starts in 3 seconds.";
+        RaiseDialerStateChanged();
+        await WaitForNextLeadAndStartAsync(nextLead);
     }
 
     private async Task StartScheduledCallAsync()
@@ -163,8 +265,13 @@ public sealed partial class MainWindowViewModel
 
     private async Task StartLeadAsync(DialerLeadRow? lead)
     {
+        CancelAutoAdvance();
+
         if (lead is null)
         {
+            CurrentLead = null;
+            StopCallDurationTimer();
+            _currentLeadMarkedAnswered = false;
             _dialerStatus = DialerRunStatus.Completed;
             StatusMessage = "No callable leads are available in the current queue.";
             RaiseDialerStateChanged();
@@ -208,7 +315,11 @@ public sealed partial class MainWindowViewModel
         }
         catch (Exception exception)
         {
-            lead.Status = "Failed";
+            StopCallDurationTimer();
+            lead.QueueState = DialerLeadQueueState.NoAnswer;
+            lead.IsCurrent = false;
+            CurrentLead = null;
+            _currentLeadMarkedAnswered = false;
             _dialerStatus = DialerRunStatus.Stopped;
             ErrorMessage = exception.Message;
             RaiseDialerStateChanged();
@@ -219,7 +330,54 @@ public sealed partial class MainWindowViewModel
         }
     }
 
-    private async Task SafeHangUpAsync()
+    private async Task WaitForNextLeadAndStartAsync(DialerLeadRow nextLead)
+    {
+        CancelAutoAdvance();
+        _autoAdvanceCancellationSource = new CancellationTokenSource();
+        var cancellationToken = _autoAdvanceCancellationSource.Token;
+
+        try
+        {
+            await Task.Delay(_zoomDesktopDialerClient.AutoNextDialDelayMs, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        if (cancellationToken.IsCancellationRequested || _dialerStatus != DialerRunStatus.Running)
+        {
+            return;
+        }
+
+        await StartLeadAsync(nextLead);
+    }
+
+    private void RequeueLead(DialerLeadRow lead)
+    {
+        lead.QueueState = DialerLeadQueueState.Pending;
+        lead.StatusLabelOverride = null;
+
+        var currentIndex = LeadQueue.IndexOf(lead);
+        if (currentIndex >= 0)
+        {
+            LeadQueue.RemoveAt(currentIndex);
+            LeadQueue.Add(lead);
+        }
+
+        ReindexQueueNumbers();
+        _currentLeadIndex = LeadQueue.IndexOf(lead);
+    }
+
+    private void ReindexQueueNumbers()
+    {
+        for (var index = 0; index < LeadQueue.Count; index++)
+        {
+            LeadQueue[index].SetQueueNumber(index + 1);
+        }
+    }
+
+    private async Task SafeHangUpAsync(bool wasAnswered, bool requeueLead, string outcomeLabel)
     {
         if (string.IsNullOrWhiteSpace(_currentExternalCallId))
         {
@@ -232,7 +390,13 @@ public sealed partial class MainWindowViewModel
 
         try
         {
-            await _apiClient.HangUpAsync(new HangUpCallRequest(externalCallId), CancellationToken.None);
+            await _apiClient.HangUpAsync(
+                new HangUpCallRequest(
+                    externalCallId,
+                    WasAnswered: wasAnswered,
+                    RequeueLead: requeueLead,
+                    OutcomeLabel: outcomeLabel),
+                CancellationToken.None);
         }
         catch (Exception exception)
         {

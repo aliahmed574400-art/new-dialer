@@ -73,6 +73,9 @@ public sealed class DialerController(
                 User.GetRequiredTenantId(),
                 User.GetRequiredUserId(),
                 request.ExternalCallId.Trim(),
+                request.WasAnswered,
+                request.RequeueLead,
+                request.OutcomeLabel,
                 cancellationToken);
 
             return NoContent();

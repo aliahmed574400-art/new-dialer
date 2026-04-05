@@ -272,7 +272,7 @@ public sealed partial class MainWindowViewModel
             SelectedAgentLeads.Clear();
             foreach (var lead in leads)
             {
-                SelectedAgentLeads.Add(MapLeadRow(lead, useAgentStatusLabels: true));
+                SelectedAgentLeads.Add(MapLeadRow(lead, useAgentStatusLabels: true, queueNumber: 0));
             }
 
             if (clearMessages)
