@@ -222,6 +222,27 @@ public sealed class NewDialerApiClient : IDisposable
         {
             using var document = JsonDocument.Parse(content);
             var root = document.RootElement;
+            if (root.TryGetProperty("errors", out var errorsElement) && errorsElement.ValueKind == JsonValueKind.Object)
+            {
+                var messages = new List<string>();
+                foreach (var property in errorsElement.EnumerateObject())
+                {
+                    foreach (var item in property.Value.EnumerateArray())
+                    {
+                        var message = item.GetString();
+                        if (!string.IsNullOrWhiteSpace(message))
+                        {
+                            messages.Add($"{property.Name}: {message}");
+                        }
+                    }
+                }
+
+                if (messages.Count > 0)
+                {
+                    return new InvalidOperationException(string.Join(Environment.NewLine, messages));
+                }
+            }
+
             if (root.TryGetProperty("detail", out var detailElement) && detailElement.ValueKind == JsonValueKind.String)
             {
                 var detail = detailElement.GetString();

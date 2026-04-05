@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using NewDialer.Api.Contracts;
 using NewDialer.Api.Security;
 using NewDialer.Application.Abstractions;
 using NewDialer.Application.Models;
@@ -56,9 +55,13 @@ public sealed class LeadsController(ILeadManagementService leadManagementService
     [HttpPost("import")]
     [Authorize(Roles = "Admin")]
     [RequestSizeLimit(25_000_000)]
-    public async Task<ActionResult<LeadImportResultDto>> ImportLeads([FromForm] LeadImportForm form, CancellationToken cancellationToken)
+    public async Task<ActionResult<LeadImportResultDto>> ImportLeads(
+        [FromForm(Name = "file")] IFormFile? file,
+        [FromForm(Name = "notes")] string? notes,
+        [FromForm(Name = "defaultAgentId")] Guid? defaultAgentId,
+        CancellationToken cancellationToken)
     {
-        if (form.File is null || form.File.Length == 0)
+        if (file is null || file.Length == 0)
         {
             return BadRequest(new ProblemDetails
             {
@@ -73,14 +76,14 @@ public sealed class LeadsController(ILeadManagementService leadManagementService
 
         try
         {
-            await using var stream = form.File.OpenReadStream();
+            await using var stream = file.OpenReadStream();
             var result = await leadManagementService.ImportLeadsAsync(
                 new LeadImportCommand(
                     TenantId: tenantId,
                     UploadedByUserId: userId,
-                    FileName: form.File.FileName,
-                    Notes: form.Notes,
-                    DefaultAgentId: form.DefaultAgentId),
+                    FileName: file.FileName,
+                    Notes: notes ?? string.Empty,
+                    DefaultAgentId: defaultAgentId),
                 stream,
                 cancellationToken);
 
