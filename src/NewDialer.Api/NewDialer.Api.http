@@ -1,0 +1,119 @@
+@NewDialer.Api_HostAddress = http://localhost:5164
+
+POST {{NewDialer.Api_HostAddress}}/api/auth/admin-signup
+Content-Type: application/json
+
+{
+  "fullName": "Areeba Shah",
+  "email": "areeba@example.com",
+  "companyName": "Atlas Growth Partners",
+  "password": "StrongPass123!",
+  "phoneNumber": "+92 300 1234567"
+}
+
+###
+
+POST {{NewDialer.Api_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "usernameOrEmail": "areeba@example.com",
+  "password": "StrongPass123!",
+  "workspaceKey": null
+}
+
+###
+
+POST {{NewDialer.Api_HostAddress}}/api/auth/logout
+Authorization: Bearer {{token}}
+
+###
+
+GET {{NewDialer.Api_HostAddress}}/api/agents/performance
+Authorization: Bearer {{token}}
+Accept: application/json
+
+###
+
+GET {{NewDialer.Api_HostAddress}}/api/platform/overview
+Accept: application/json
+
+###
+
+GET {{NewDialer.Api_HostAddress}}/api/leads
+Authorization: Bearer {{token}}
+Accept: application/json
+
+###
+
+GET {{NewDialer.Api_HostAddress}}/api/leads/assigned
+Authorization: Bearer {{token}}
+Accept: application/json
+
+###
+
+GET {{NewDialer.Api_HostAddress}}/api/leads/agents
+Authorization: Bearer {{token}}
+Accept: application/json
+
+###
+
+GET {{NewDialer.Api_HostAddress}}/api/schedules
+Authorization: Bearer {{token}}
+Accept: application/json
+
+###
+
+POST {{NewDialer.Api_HostAddress}}/api/schedules
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "leadId": "00000000-0000-0000-0000-000000000000",
+  "scheduledForUtc": "2026-04-05T12:00:00Z",
+  "timeZoneId": "Asia/Karachi",
+  "notes": "Requested a callback after the budget review."
+}
+
+###
+
+POST {{NewDialer.Api_HostAddress}}/api/leads/assignments
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "agentId": "00000000-0000-0000-0000-000000000000",
+  "leadIds": [
+    "00000000-0000-0000-0000-000000000000"
+  ]
+}
+
+###
+
+GET {{NewDialer.Api_HostAddress}}/api/schedules/export
+Authorization: Bearer {{token}}
+
+###
+
+POST {{NewDialer.Api_HostAddress}}/api/dialer/call/start
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "leadId": "00000000-0000-0000-0000-000000000000",
+  "phoneNumber": "+14155550101",
+  "displayName": "Atlas Growth Lead",
+  "externalCallId": "desktop-00000000000000000000000000000000"
+}
+
+###
+
+POST {{NewDialer.Api_HostAddress}}/api/dialer/call/hangup
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "externalCallId": "desktop-00000000000000000000000000000000"
+}
+
+###
