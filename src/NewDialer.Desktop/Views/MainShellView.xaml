@@ -158,7 +158,7 @@
                     <TextBlock Text="Progress" Foreground="#FF7E8DA9" FontFamily="Consolas" FontSize="13" />
                     <TextBlock Grid.Column="1" Text="{Binding DialerProgressText}" Foreground="#FF9FD6E8" FontFamily="Consolas" FontSize="13" />
                   </Grid>
-                  <ProgressBar Margin="0,10,0,0" Height="8" Maximum="{Binding DialerProgressMaximum}" Value="{Binding DialerProgressValue}" Foreground="#FF12D7FF" Background="#FF1B2941" />
+                  <ProgressBar Margin="0,10,0,0" Height="8" Maximum="{Binding DialerProgressMaximum, Mode=OneWay}" Value="{Binding DialerProgressValue, Mode=OneWay}" Foreground="#FF12D7FF" Background="#FF1B2941" />
                   <Button Content="Start Dialing" Style="{StaticResource PrimaryButtonStyle}" Command="{Binding StartDialerCommand}" IsEnabled="{Binding CanStart}" Margin="0,26,0,0" Padding="18,14" FontSize="22" />
                   <Button Content="Picked Up" Style="{StaticResource PrimaryButtonStyle}" Command="{Binding MarkPickedUpCommand}" IsEnabled="{Binding CanMarkPickedUp}" Visibility="{Binding HasCurrentCall, Converter={StaticResource BoolToVis}}" Margin="0,14,0,0" Padding="18,14" FontSize="20" Background="#FF13D867" />
                   <Button Content="Hang Up" Style="{StaticResource PrimaryButtonStyle}" Command="{Binding HangUpCommand}" IsEnabled="{Binding CanHangUp}" Visibility="{Binding HasCurrentCall, Converter={StaticResource BoolToVis}}" Margin="0,12,0,0" Padding="18,14" FontSize="20" Background="#FFFF4268" />
