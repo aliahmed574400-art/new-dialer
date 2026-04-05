@@ -85,6 +85,20 @@ dotnet tool run dotnet-ef database update --project src/NewDialer.Infrastructure
 - `Desktop:ZoomUriScheme` defaults to `zoomphonecall`
 - `Desktop:ZoomExecutablePath` can be set explicitly if Zoom is installed in a custom location
 
+## Docker and Render
+
+- the repository now includes a root `Dockerfile` for deploying `src/NewDialer.Api` to Render as a Docker web service
+- create a Render `Postgres` database and a `Web Service`
+- set the web service language to `Docker`
+- use the repository root as the Docker build context
+- add these environment variables in Render:
+  - `ASPNETCORE_ENVIRONMENT=Production`
+  - `Jwt__Issuer=NewDialer`
+  - `Jwt__Audience=NewDialer.Desktop`
+  - `Jwt__SigningKey=<long random secret>`
+  - `ConnectionStrings__PostgreSql=<Render internal PostgreSQL connection string>`
+- Render will inject `PORT`, and the Docker container will bind the API automatically
+
 ## Packaging
 
 - `scripts/publish-desktop.ps1`: publishes the WPF desktop client for `win-x64`
@@ -116,8 +130,8 @@ dotnet tool run dotnet-ef database update --project src/NewDialer.Infrastructure
 
 ## Local database status
 
-- I generated the EF Core migrations successfully
-- I still could not apply them locally because PostgreSQL is not listening on `127.0.0.1:5432`
-- on April 4, 2026, the official EDB PostgreSQL 17 Windows installer download was blocked from this machine with `403 Forbidden`, so PostgreSQL is still the remaining local prerequisite
+- local development expects PostgreSQL on `localhost:5432` by default
+- local secrets should not be committed to source control; use local config overrides or environment variables instead
+- production deployment should use Render environment variables for database and JWT settings
 
 See `docs/architecture.md` for the assumptions and next implementation milestones.

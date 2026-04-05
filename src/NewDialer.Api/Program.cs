@@ -23,7 +23,7 @@ builder.Services.AddScoped<IAccessTokenService, JwtAccessTokenService>();
 
 var connectionString =
     builder.Configuration.GetConnectionString("PostgreSql")
-    ?? "Host=localhost;Port=5164;Database=newdialer;Username=postgres;Password=postgres";
+    ?? "Host=localhost;Port=5432;Database=newdialer;Username=postgres;Password=change-me";
 
 builder.Services.AddDbContext<DialerDbContext>(options => options.UseNpgsql(connectionString));
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

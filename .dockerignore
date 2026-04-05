@@ -1,0 +1,13 @@
+.git
+.vs
+.vscode
+.idea
+.dotnet
+artifacts
+**/bin
+**/obj
+**/*.user
+**/*.suo
+**/*.cache
+**/*.db
+installer
