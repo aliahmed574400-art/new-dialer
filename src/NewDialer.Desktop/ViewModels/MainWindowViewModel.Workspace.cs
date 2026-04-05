@@ -301,11 +301,6 @@ public sealed partial class MainWindowViewModel
             NavigationItems.Add(new ShellNavItem { Title = "Billing", Subtitle = "Trial and subscription management", Section = ShellSection.Billing });
         }
 
-        if (IsAgent)
-        {
-            NavigationItems.Add(new ShellNavItem { Title = "Billing", Subtitle = "Read-only subscription access", Section = ShellSection.Billing });
-        }
-
         if (IsDeveloper)
         {
             NavigationItems.Add(new ShellNavItem { Title = "Billing", Subtitle = "Plan state across tenants", Section = ShellSection.Billing });
