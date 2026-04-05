@@ -52,8 +52,10 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         DashboardCards = [];
         NavigationItems = [];
         LeadQueue = [];
+        AdminAssignableLeads = [];
         ScheduledCalls = [];
         Agents = [];
+        SelectedAgentLeads = [];
         AgentPerformance = [];
         DeveloperTenants = [];
         AgentOptions = [];
@@ -81,9 +83,13 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 
     public ObservableCollection<DialerLeadRow> LeadQueue { get; }
 
+    public ObservableCollection<DialerLeadRow> AdminAssignableLeads { get; }
+
     public ObservableCollection<ScheduledCallEntry> ScheduledCalls { get; }
 
     public ObservableCollection<AgentAdminRow> Agents { get; }
+
+    public ObservableCollection<DialerLeadRow> SelectedAgentLeads { get; }
 
     public ObservableCollection<AgentPerformanceRow> AgentPerformance { get; }
 

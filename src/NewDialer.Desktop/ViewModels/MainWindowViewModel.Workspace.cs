@@ -79,8 +79,10 @@ public sealed partial class MainWindowViewModel
     {
         var selectedAgentId = preferredAgentId ?? SelectedAgent?.AgentId;
         LeadQueue.Clear();
+        AdminAssignableLeads.Clear();
         ScheduledCalls.Clear();
         Agents.Clear();
+        SelectedAgentLeads.Clear();
         AgentPerformance.Clear();
         DeveloperTenants.Clear();
         AgentOptions.Clear();
@@ -142,6 +144,10 @@ public sealed partial class MainWindowViewModel
             if (agentsTask is not null)
             {
                 PopulateAgents(agentsTask.Result, selectedAgentId);
+                if (SelectedAgent is not null)
+                {
+                    await LoadSelectedAgentLeadsAsync(SelectedAgent.AgentId, clearMessages: false);
+                }
             }
 
             if (agentOptionsTask is not null)
@@ -197,20 +203,16 @@ public sealed partial class MainWindowViewModel
     private void PopulateLeadQueue(IEnumerable<LeadDto> leads)
     {
         LeadQueue.Clear();
+        AdminAssignableLeads.Clear();
         foreach (var lead in leads)
         {
-            LeadQueue.Add(new DialerLeadRow
+            var row = MapLeadRow(lead, useAgentStatusLabels: false);
+            LeadQueue.Add(row);
+
+            if (lead.AssignedAgentId is null)
             {
-                Id = lead.Id,
-                Name = lead.Name,
-                Email = lead.Email,
-                PhoneNumber = lead.PhoneNumber,
-                Website = lead.Website,
-                Service = lead.Service,
-                Budget = lead.Budget,
-                AssignedAgentName = lead.AssignedAgentName,
-                Status = MapLeadStatus(lead.Status),
-            });
+                AdminAssignableLeads.Add(MapLeadRow(lead, useAgentStatusLabels: false));
+            }
         }
     }
 
@@ -353,8 +355,10 @@ public sealed partial class MainWindowViewModel
         SelectedAssignmentAgent = null;
         ImportNotes = string.Empty;
         LeadQueue.Clear();
+        AdminAssignableLeads.Clear();
         ScheduledCalls.Clear();
         Agents.Clear();
+        SelectedAgentLeads.Clear();
         AgentPerformance.Clear();
         DeveloperTenants.Clear();
         AgentOptions.Clear();
@@ -427,6 +431,37 @@ public sealed partial class MainWindowViewModel
             LeadStatus.DoNotCall => "Do Not Call",
             LeadStatus.Failed => "Failed",
             _ => "Queued",
+        };
+    }
+
+    private static string MapAgentSheetStatus(LeadStatus status)
+    {
+        return status switch
+        {
+            LeadStatus.Completed => "Dialed",
+            LeadStatus.Dialing => "Calling",
+            LeadStatus.FollowUpScheduled => "Scheduled",
+            LeadStatus.Failed => "Missed",
+            LeadStatus.DoNotCall => "Do Not Call",
+            LeadStatus.New => "New",
+            LeadStatus.Queued => "Queued",
+            _ => "Queued",
+        };
+    }
+
+    private static DialerLeadRow MapLeadRow(LeadDto lead, bool useAgentStatusLabels)
+    {
+        return new DialerLeadRow
+        {
+            Id = lead.Id,
+            Name = lead.Name,
+            Email = lead.Email,
+            PhoneNumber = lead.PhoneNumber,
+            Website = lead.Website,
+            Service = lead.Service,
+            Budget = lead.Budget,
+            AssignedAgentName = lead.AssignedAgentName,
+            Status = useAgentStatusLabels ? MapAgentSheetStatus(lead.Status) : MapLeadStatus(lead.Status),
         };
     }
 

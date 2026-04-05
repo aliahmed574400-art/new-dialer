@@ -106,15 +106,18 @@ public sealed partial class MainWindowViewModel
             return;
         }
 
+        var agentId = SelectedAssignmentAgent.AgentId;
+        var agentName = SelectedAssignmentAgent.FullName;
+
         SetBusy(true);
         ClearMessages();
-        StatusMessage = $"Assigning {leadIds.Count} lead(s) to {SelectedAssignmentAgent.FullName}...";
+        StatusMessage = $"Assigning {leadIds.Count} lead(s) to {agentName}...";
 
         try
         {
-            await _apiClient.AssignLeadsAsync(SelectedAssignmentAgent.AgentId, leadIds, CancellationToken.None);
-            await LoadWorkspaceDataAsync();
-            StatusMessage = $"Assigned {leadIds.Count} lead(s) to {SelectedAssignmentAgent.FullName}.";
+            await _apiClient.AssignLeadsAsync(agentId, leadIds, CancellationToken.None);
+            await LoadWorkspaceDataAsync(agentId);
+            StatusMessage = $"Assigned {leadIds.Count} lead(s) to {agentName}.";
         }
         catch (Exception exception)
         {

@@ -68,6 +68,10 @@ public sealed partial class MainWindowViewModel
 
     public string SelectedAgentCheckOutDisplay => SelectedAgent?.CheckOut ?? "-";
 
+    public string SelectedAgentLeadSheetSummary => SelectedAgent is null
+        ? "Select an agent to review every assigned lead and its current dialing status."
+        : $"{SelectedAgent.FullName}'s assigned lead sheet and current statuses.";
+
     public void SetAgentPassword(string password)
     {
         _agentFormPassword = password;
@@ -203,6 +207,7 @@ public sealed partial class MainWindowViewModel
         OnPropertyChanged(nameof(SelectedAgentTalkTimeDisplay));
         OnPropertyChanged(nameof(SelectedAgentCheckInDisplay));
         OnPropertyChanged(nameof(SelectedAgentCheckOutDisplay));
+        OnPropertyChanged(nameof(SelectedAgentLeadSheetSummary));
         RaiseAgentEditorStateChanged();
     }
 
@@ -245,5 +250,40 @@ public sealed partial class MainWindowViewModel
         OnPropertyChanged(nameof(CanManageAgents));
         OnPropertyChanged(nameof(CanSaveAgent));
         OnPropertyChanged(nameof(CanDeleteSelectedAgent));
+    }
+
+    public async Task LoadSelectedAgentLeadsAsync(Guid agentId, bool clearMessages = true)
+    {
+        if (!IsAdmin || agentId == Guid.Empty)
+        {
+            SelectedAgentLeads.Clear();
+            return;
+        }
+
+        if (clearMessages)
+        {
+            ClearMessages();
+            StatusMessage = "Loading assigned leads...";
+        }
+
+        try
+        {
+            var leads = await _apiClient.GetAssignedLeadsForAgentAsync(agentId, CancellationToken.None);
+            SelectedAgentLeads.Clear();
+            foreach (var lead in leads)
+            {
+                SelectedAgentLeads.Add(MapLeadRow(lead, useAgentStatusLabels: true));
+            }
+
+            if (clearMessages)
+            {
+                StatusMessage = $"Loaded {SelectedAgentLeads.Count} lead(s) for {SelectedAgent?.FullName ?? "the selected agent"}.";
+            }
+        }
+        catch (Exception exception)
+        {
+            SelectedAgentLeads.Clear();
+            ErrorMessage = exception.Message;
+        }
     }
 }

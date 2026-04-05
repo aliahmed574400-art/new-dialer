@@ -126,5 +126,19 @@ public partial class MainShellView : UserControl
     private void AgentsGrid_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         AgentPasswordBox.Clear();
+        if (DataContext is MainWindowViewModel viewModel && viewModel.SelectedAgent is not null)
+        {
+            _ = viewModel.LoadSelectedAgentLeadsAsync(viewModel.SelectedAgent.AgentId);
+        }
+    }
+
+    private void SelectAllLeads_Click(object sender, RoutedEventArgs e)
+    {
+        AdminLeadsGrid.SelectAll();
+    }
+
+    private void ClearLeadSelection_Click(object sender, RoutedEventArgs e)
+    {
+        AdminLeadsGrid.UnselectAll();
     }
 }

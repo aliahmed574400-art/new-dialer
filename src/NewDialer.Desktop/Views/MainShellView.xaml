@@ -198,11 +198,16 @@
                     <TextBlock Text="Select one or more leads from the table below, choose an agent, and assign them instantly." Margin="0,8,0,14" Foreground="{StaticResource MutedInkBrush}" TextWrapping="Wrap" />
                     <TextBlock Text="Assign To" Foreground="{StaticResource InkBrush}" FontWeight="SemiBold" />
                     <ComboBox Margin="0,8,0,14" Padding="10,6" ItemsSource="{Binding AgentOptions}" SelectedItem="{Binding SelectedAssignmentAgent}" DisplayMemberPath="FullName" />
-                    <Button Content="Assign Selected Leads" Style="{StaticResource SecondaryButtonStyle}" Click="AssignSelectedLeads_Click" IsEnabled="{Binding CanManageLeads}" />
+                    <WrapPanel>
+                      <Button Content="Assign Selected Leads" Style="{StaticResource SecondaryButtonStyle}" Click="AssignSelectedLeads_Click" IsEnabled="{Binding CanManageLeads}" />
+                      <Button Content="Select All Visible" Style="{StaticResource SecondaryButtonStyle}" Click="SelectAllLeads_Click" IsEnabled="{Binding CanManageLeads}" />
+                      <Button Content="Clear Selection" Style="{StaticResource SecondaryButtonStyle}" Click="ClearLeadSelection_Click" IsEnabled="{Binding CanManageLeads}" />
+                    </WrapPanel>
+                    <TextBlock Text="Tip: use Select All Visible or Ctrl/Shift-click rows to assign multiple leads at once." Margin="0,12,0,0" Foreground="{StaticResource MutedInkBrush}" TextWrapping="Wrap" />
                   </StackPanel>
                 </Border>
               </Grid>
-              <DataGrid x:Name="AdminLeadsGrid" ItemsSource="{Binding LeadQueue}" SelectedItem="{Binding SelectedLead}" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False" CanUserResizeRows="False" IsReadOnly="True" ClipboardCopyMode="None" RowHeaderWidth="0" SelectionMode="Extended">
+              <DataGrid x:Name="AdminLeadsGrid" ItemsSource="{Binding AdminAssignableLeads}" SelectedItem="{Binding SelectedLead}" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False" CanUserResizeRows="False" IsReadOnly="True" ClipboardCopyMode="None" RowHeaderWidth="0" SelectionMode="Extended" SelectionUnit="FullRow">
                 <DataGrid.Columns>
                   <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*" />
                   <DataGridTextColumn Header="Email" Binding="{Binding Email}" Width="*" />
@@ -305,6 +310,19 @@
                   <DataGridTextColumn Header="Talk Time" Binding="{Binding TalkTime}" Width="140" />
                   <DataGridTextColumn Header="Check In" Binding="{Binding CheckIn}" Width="120" />
                   <DataGridTextColumn Header="Check Out" Binding="{Binding CheckOut}" Width="120" />
+                </DataGrid.Columns>
+              </DataGrid>
+              <TextBlock Text="Assigned Lead Sheet" Margin="0,18,0,8" FontFamily="Bahnschrift SemiBold" FontSize="20" Foreground="{StaticResource InkBrush}" />
+              <TextBlock Text="{Binding SelectedAgentLeadSheetSummary}" Margin="0,0,0,12" Foreground="{StaticResource MutedInkBrush}" TextWrapping="Wrap" />
+              <DataGrid ItemsSource="{Binding SelectedAgentLeads}" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False" CanUserResizeRows="False" IsReadOnly="True" RowHeaderWidth="0" ClipboardCopyMode="None">
+                <DataGrid.Columns>
+                  <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*" />
+                  <DataGridTextColumn Header="Email" Binding="{Binding Email}" Width="*" />
+                  <DataGridTextColumn Header="Phone" Binding="{Binding PhoneNumber}" Width="160" />
+                  <DataGridTextColumn Header="Website" Binding="{Binding Website}" Width="*" />
+                  <DataGridTextColumn Header="Service" Binding="{Binding Service}" Width="160" />
+                  <DataGridTextColumn Header="Budget" Binding="{Binding Budget}" Width="120" />
+                  <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="130" />
                 </DataGrid.Columns>
               </DataGrid>
             </StackPanel>

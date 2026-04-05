@@ -62,6 +62,11 @@ public sealed class NewDialerApiClient : IDisposable
         return SendAsync<IReadOnlyList<LeadDto>>(HttpMethod.Get, path, payload: null, includeAuthorization: true, cancellationToken);
     }
 
+    public Task<IReadOnlyList<LeadDto>> GetAssignedLeadsForAgentAsync(Guid agentId, CancellationToken cancellationToken)
+    {
+        return SendAsync<IReadOnlyList<LeadDto>>(HttpMethod.Get, $"api/leads/assigned?agentId={agentId}", payload: null, includeAuthorization: true, cancellationToken);
+    }
+
     public Task<IReadOnlyList<AgentAssignmentOptionDto>> GetAgentOptionsAsync(CancellationToken cancellationToken)
     {
         return SendAsync<IReadOnlyList<AgentAssignmentOptionDto>>(HttpMethod.Get, "api/leads/agents", payload: null, includeAuthorization: true, cancellationToken);
