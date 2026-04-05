@@ -179,7 +179,7 @@ public sealed class LeadManagementService(
     public async Task<IReadOnlyList<AgentAssignmentOptionDto>> GetAgentOptionsAsync(Guid tenantId, CancellationToken cancellationToken)
     {
         return await dbContext.Users
-            .Where(x => x.TenantId == tenantId && x.Role == UserRole.Agent)
+            .Where(x => x.TenantId == tenantId && x.Role == UserRole.Agent && x.IsEnabled)
             .OrderBy(x => x.FullName)
             .Select(x => new AgentAssignmentOptionDto(
                 x.Id,

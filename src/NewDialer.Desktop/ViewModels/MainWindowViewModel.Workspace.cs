@@ -75,16 +75,19 @@ public sealed partial class MainWindowViewModel
         RaiseSessionChanged();
     }
 
-    private async Task LoadWorkspaceDataAsync()
+    private async Task LoadWorkspaceDataAsync(Guid? preferredAgentId = null)
     {
+        var selectedAgentId = preferredAgentId ?? SelectedAgent?.AgentId;
         LeadQueue.Clear();
         ScheduledCalls.Clear();
+        Agents.Clear();
         AgentPerformance.Clear();
         DeveloperTenants.Clear();
         AgentOptions.Clear();
         ImportBatches.Clear();
         SelectedLead = null;
         SelectedScheduledCall = null;
+        SelectedAgent = null;
         CurrentLead = null;
         _currentLeadIndex = -1;
         _currentExternalCallId = null;
@@ -105,21 +108,21 @@ public sealed partial class MainWindowViewModel
         {
             var leadTask = _apiClient.GetLeadsAsync(IsAgent, CancellationToken.None);
             var scheduleTask = _apiClient.GetScheduledCallsAsync(CancellationToken.None);
-            Task<IReadOnlyList<NewDialer.Contracts.Analytics.AgentPerformanceDto>>? performanceTask = null;
+            Task<IReadOnlyList<NewDialer.Contracts.Agents.AgentAdminDto>>? agentsTask = null;
             Task<IReadOnlyList<NewDialer.Contracts.Leads.AgentAssignmentOptionDto>>? agentOptionsTask = null;
             Task<IReadOnlyList<NewDialer.Contracts.Leads.LeadImportBatchDto>>? importBatchesTask = null;
 
             if (IsAdmin)
             {
-                performanceTask = _apiClient.GetAgentPerformanceAsync(CancellationToken.None);
+                agentsTask = _apiClient.GetAgentsAsync(CancellationToken.None);
                 agentOptionsTask = _apiClient.GetAgentOptionsAsync(CancellationToken.None);
                 importBatchesTask = _apiClient.GetImportBatchesAsync(CancellationToken.None);
             }
 
             var backgroundTasks = new List<Task> { leadTask, scheduleTask };
-            if (performanceTask is not null)
+            if (agentsTask is not null)
             {
-                backgroundTasks.Add(performanceTask);
+                backgroundTasks.Add(agentsTask);
             }
 
             if (agentOptionsTask is not null)
@@ -136,9 +139,9 @@ public sealed partial class MainWindowViewModel
             PopulateLeadQueue(leadTask.Result);
             PopulateSchedules(scheduleTask.Result);
 
-            if (performanceTask is not null)
+            if (agentsTask is not null)
             {
-                PopulateAgentPerformance(performanceTask.Result);
+                PopulateAgents(agentsTask.Result, selectedAgentId);
             }
 
             if (agentOptionsTask is not null)
@@ -259,7 +262,7 @@ public sealed partial class MainWindowViewModel
         if (_session is null)
         {
             CurrentUserName = "Sign in to NewDialer";
-            RoleHeadline = "Use your admin email or your agent username with the workspace key.";
+            RoleHeadline = "Use your email to sign in, or use an agent username with the workspace key.";
             return;
         }
 
@@ -351,12 +354,14 @@ public sealed partial class MainWindowViewModel
         ImportNotes = string.Empty;
         LeadQueue.Clear();
         ScheduledCalls.Clear();
+        Agents.Clear();
         AgentPerformance.Clear();
         DeveloperTenants.Clear();
         AgentOptions.Clear();
         ImportBatches.Clear();
         SelectedLead = null;
         SelectedScheduledCall = null;
+        ClearAgentForm();
         CurrentLead = null;
         _currentLeadIndex = -1;
         _currentExternalCallId = null;
@@ -382,6 +387,7 @@ public sealed partial class MainWindowViewModel
         OnPropertyChanged(nameof(CanUseDialer));
         OnPropertyChanged(nameof(CanViewData));
         OnPropertyChanged(nameof(CanManageLeads));
+        OnPropertyChanged(nameof(CanManageAgents));
         OnPropertyChanged(nameof(AgentAnalyticsMessage));
         RaiseDialerStateChanged();
     }

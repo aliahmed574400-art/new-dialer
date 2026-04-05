@@ -66,4 +66,65 @@ public partial class MainShellView : UserControl
 
         await viewModel.AssignLeadsAsync(selectedLeadIds);
     }
+
+    private void AgentPasswordBox_OnPasswordChanged(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainWindowViewModel viewModel && sender is PasswordBox passwordBox)
+        {
+            viewModel.SetAgentPassword(passwordBox.Password);
+        }
+    }
+
+    private async void SaveAgent_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel viewModel)
+        {
+            return;
+        }
+
+        if (await viewModel.SaveAgentAsync())
+        {
+            AgentPasswordBox.Clear();
+        }
+    }
+
+    private void ClearAgentForm_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel viewModel)
+        {
+            return;
+        }
+
+        viewModel.ClearAgentForm();
+        AgentPasswordBox.Clear();
+    }
+
+    private async void DeleteSelectedAgent_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel viewModel || viewModel.SelectedAgent is null)
+        {
+            return;
+        }
+
+        var confirm = MessageBox.Show(
+            $"Delete agent access for {viewModel.SelectedAgent.FullName}?",
+            "Delete Agent",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+
+        if (confirm != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        if (await viewModel.DeleteSelectedAgentAsync())
+        {
+            AgentPasswordBox.Clear();
+        }
+    }
+
+    private void AgentsGrid_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        AgentPasswordBox.Clear();
+    }
 }

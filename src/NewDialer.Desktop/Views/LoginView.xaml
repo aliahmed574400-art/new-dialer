@@ -49,7 +49,7 @@
             </Border>
           </WrapPanel>
         </StackPanel>
-        <TextBlock Grid.Row="2" Text="Tip: agents should sign in with username + workspace key, while admins can use email." Foreground="#AFC0D2" FontSize="13" TextWrapping="Wrap" />
+        <TextBlock Grid.Row="2" Text="Tip: admins and agents can sign in with email. Agent usernames with a workspace key still work too." Foreground="#AFC0D2" FontSize="13" TextWrapping="Wrap" />
       </Grid>
     </Border>
     <Grid Grid.Column="1" Margin="20,28,28,28">

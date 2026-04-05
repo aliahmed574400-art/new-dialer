@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using System.IO;
 using System.Text;
 using System.Text.Json;
+using NewDialer.Contracts.Agents;
 using NewDialer.Contracts.Analytics;
 using NewDialer.Contracts.Auth;
 using NewDialer.Contracts.Dialer;
@@ -73,7 +74,7 @@ public sealed class NewDialerApiClient : IDisposable
 
     public async Task<LeadImportResultDto> ImportLeadsAsync(string filePath, Guid? defaultAgentId, string notes, CancellationToken cancellationToken)
     {
-        using var stream = File.OpenRead(filePath);
+        using var stream = OpenImportFileStream(filePath);
         using var fileContent = new StreamContent(stream);
         fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
         using var form = new MultipartFormDataContent();
@@ -106,6 +107,34 @@ public sealed class NewDialerApiClient : IDisposable
         }
 
         return result;
+    }
+
+    private static FileStream OpenImportFileStream(string filePath)
+    {
+        try
+        {
+            return new FileStream(
+                filePath,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.ReadWrite | FileShare.Delete);
+        }
+        catch (FileNotFoundException)
+        {
+            throw new InvalidOperationException("The selected Excel file could not be found.");
+        }
+        catch (DirectoryNotFoundException)
+        {
+            throw new InvalidOperationException("The selected Excel file location could not be found.");
+        }
+        catch (UnauthorizedAccessException)
+        {
+            throw new InvalidOperationException("The selected Excel file is not accessible. Close Excel, Explorer preview, or any app using the file and try again.");
+        }
+        catch (IOException)
+        {
+            throw new InvalidOperationException("The selected Excel file is currently in use. Close Excel, the preview pane, or any app using the file and try again.");
+        }
     }
 
     public Task AssignLeadsAsync(Guid agentId, IReadOnlyCollection<Guid> leadIds, CancellationToken cancellationToken)
@@ -146,6 +175,26 @@ public sealed class NewDialerApiClient : IDisposable
     public Task<IReadOnlyList<AgentPerformanceDto>> GetAgentPerformanceAsync(CancellationToken cancellationToken)
     {
         return SendAsync<IReadOnlyList<AgentPerformanceDto>>(HttpMethod.Get, "api/agents/performance", payload: null, includeAuthorization: true, cancellationToken);
+    }
+
+    public Task<IReadOnlyList<AgentAdminDto>> GetAgentsAsync(CancellationToken cancellationToken)
+    {
+        return SendAsync<IReadOnlyList<AgentAdminDto>>(HttpMethod.Get, "api/agents", payload: null, includeAuthorization: true, cancellationToken);
+    }
+
+    public Task<AgentAdminDto> CreateAgentAsync(CreateAgentRequest request, CancellationToken cancellationToken)
+    {
+        return SendAsync<AgentAdminDto>(HttpMethod.Post, "api/agents", request, includeAuthorization: true, cancellationToken);
+    }
+
+    public Task<AgentAdminDto> UpdateAgentAsync(Guid agentId, UpdateAgentRequest request, CancellationToken cancellationToken)
+    {
+        return SendAsync<AgentAdminDto>(HttpMethod.Put, $"api/agents/{agentId}", request, includeAuthorization: true, cancellationToken);
+    }
+
+    public Task DeleteAgentAsync(Guid agentId, CancellationToken cancellationToken)
+    {
+        return SendAsync(HttpMethod.Delete, $"api/agents/{agentId}", payload: null, includeAuthorization: true, cancellationToken);
     }
 
     public void Dispose()

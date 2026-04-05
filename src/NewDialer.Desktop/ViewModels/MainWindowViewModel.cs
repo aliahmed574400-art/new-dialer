@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Windows.Input;
+using NewDialer.Contracts.Agents;
 using NewDialer.Contracts.Auth;
 using NewDialer.Contracts.Leads;
 using NewDialer.Desktop.Commands;
@@ -26,6 +27,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 
     private SessionDto? _session;
     private ShellNavItem? _selectedNavigation;
+    private AgentAdminRow? _selectedAgent;
     private DialerLeadRow? _currentLead;
     private DialerLeadRow? _selectedLead;
     private ScheduledCallEntry? _selectedScheduledCall;
@@ -51,6 +53,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         NavigationItems = [];
         LeadQueue = [];
         ScheduledCalls = [];
+        Agents = [];
         AgentPerformance = [];
         DeveloperTenants = [];
         AgentOptions = [];
@@ -79,6 +82,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public ObservableCollection<DialerLeadRow> LeadQueue { get; }
 
     public ObservableCollection<ScheduledCallEntry> ScheduledCalls { get; }
+
+    public ObservableCollection<AgentAdminRow> Agents { get; }
 
     public ObservableCollection<AgentPerformanceRow> AgentPerformance { get; }
 
@@ -143,6 +148,18 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             if (SetProperty(ref _selectedScheduledCall, value))
             {
                 RaiseCommandStates();
+            }
+        }
+    }
+
+    public AgentAdminRow? SelectedAgent
+    {
+        get => _selectedAgent;
+        set
+        {
+            if (SetProperty(ref _selectedAgent, value))
+            {
+                ApplyAgentSelection(value);
             }
         }
     }
@@ -268,7 +285,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     public string CurrentLeadBudget => CurrentLead?.Budget ?? "Budget appears here";
 
     public string AgentAnalyticsMessage => IsAdmin
-        ? "Daily agent calls, talk time, and check-in status are now pulled from live work-session data."
+        ? "Create agents, update their access details, and review live calls, schedules, and attendance from one admin panel."
         : "Agent analytics are available to admins only.";
 
     public async Task<bool> CreateScheduleAsync(ScheduledCallDraft draft)
@@ -289,6 +306,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(CanCreateSchedule));
         OnPropertyChanged(nameof(CanUseDialer));
         OnPropertyChanged(nameof(CanManageLeads));
+        OnPropertyChanged(nameof(CanManageAgents));
+        OnPropertyChanged(nameof(CanSaveAgent));
+        OnPropertyChanged(nameof(CanDeleteSelectedAgent));
     }
 
     private void RaiseDialerStateChanged()

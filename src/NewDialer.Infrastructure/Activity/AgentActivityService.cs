@@ -163,7 +163,7 @@ public sealed class AgentActivityService(
 
         var agents = await dbContext.Users
             .AsNoTracking()
-            .Where(x => x.TenantId == tenantId && x.Role == UserRole.Agent)
+            .Where(x => x.TenantId == tenantId && x.Role == UserRole.Agent && x.IsEnabled)
             .OrderBy(x => x.FullName)
             .Select(x => new { x.Id, x.FullName })
             .ToListAsync(cancellationToken);

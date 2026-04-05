@@ -123,7 +123,7 @@ public sealed partial class MainWindowViewModel
 
     public string AuthenticationSubtitle => IsSignupMode
         ? "Launch a new tenant with the 15-day trial, then start adding agents and importing leads."
-        : "Admins can use their email. Agents should use username plus workspace key.";
+        : "Admins and agents can sign in with email. Agent usernames with workspace keys are also supported.";
 
     public string AuthenticationSubmitText => IsSignupMode ? "Create Workspace" : "Sign In";
 

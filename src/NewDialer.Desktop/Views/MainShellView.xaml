@@ -230,12 +230,78 @@
         <StackPanel Visibility="{Binding SelectedSection, Converter={StaticResource SectionToVisibilityConverter}, ConverterParameter=Agents}">
           <Border Style="{StaticResource CardBorderStyle}">
             <StackPanel>
-              <TextBlock Text="Agent Performance" FontFamily="Bahnschrift SemiBold" FontSize="24" Foreground="{StaticResource InkBrush}" />
+              <TextBlock Text="Agent Administration" FontFamily="Bahnschrift SemiBold" FontSize="24" Foreground="{StaticResource InkBrush}" />
               <TextBlock Text="{Binding AgentAnalyticsMessage}" Margin="0,8,0,18" Foreground="{StaticResource MutedInkBrush}" TextWrapping="Wrap" />
-              <DataGrid ItemsSource="{Binding AgentPerformance}" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False" CanUserResizeRows="False" IsReadOnly="True" RowHeaderWidth="0">
+              <Grid Margin="0,0,0,18">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="1.05*" />
+                  <ColumnDefinition Width="0.95*" />
+                </Grid.ColumnDefinitions>
+                <Border Grid.Column="0" Background="{StaticResource AccentSoftBrush}" CornerRadius="18" Padding="16" Margin="0,0,16,0">
+                  <StackPanel>
+                    <TextBlock Text="{Binding AgentFormTitle}" FontFamily="Bahnschrift SemiBold" FontSize="20" Foreground="{StaticResource InkBrush}" />
+                    <TextBlock Text="{Binding AgentFormDescription}" Margin="0,8,0,14" Foreground="{StaticResource MutedInkBrush}" TextWrapping="Wrap" />
+                    <TextBlock Text="Agent Name" Foreground="{StaticResource InkBrush}" FontWeight="SemiBold" />
+                    <TextBox Margin="0,8,0,12" Padding="12,10" Text="{Binding AgentFormFullName, UpdateSourceTrigger=PropertyChanged}" BorderBrush="{StaticResource OutlineBrush}" BorderThickness="1" />
+                    <TextBlock Text="Agent Email" Foreground="{StaticResource InkBrush}" FontWeight="SemiBold" />
+                    <TextBox Margin="0,8,0,12" Padding="12,10" Text="{Binding AgentFormEmail, UpdateSourceTrigger=PropertyChanged}" BorderBrush="{StaticResource OutlineBrush}" BorderThickness="1" />
+                    <TextBlock Text="Password" Foreground="{StaticResource InkBrush}" FontWeight="SemiBold" />
+                    <PasswordBox x:Name="AgentPasswordBox" Margin="0,8,0,6" Padding="12,10" BorderBrush="{StaticResource OutlineBrush}" BorderThickness="1" PasswordChanged="AgentPasswordBox_OnPasswordChanged" />
+                    <TextBlock Text="Leave password blank while editing to keep the current password." Foreground="{StaticResource MutedInkBrush}" FontSize="12" TextWrapping="Wrap" />
+                    <WrapPanel Margin="0,16,0,0">
+                      <Button Content="{Binding AgentPrimaryButtonText}" Style="{StaticResource PrimaryButtonStyle}" Click="SaveAgent_Click" IsEnabled="{Binding CanSaveAgent}" />
+                      <Button Content="Clear Form" Style="{StaticResource SecondaryButtonStyle}" Click="ClearAgentForm_Click" IsEnabled="{Binding CanManageAgents}" />
+                      <Button Content="Delete Agent" Style="{StaticResource SecondaryButtonStyle}" Click="DeleteSelectedAgent_Click" IsEnabled="{Binding CanDeleteSelectedAgent}" />
+                    </WrapPanel>
+                  </StackPanel>
+                </Border>
+                <Border Grid.Column="1" Background="#FFF8FAFC" CornerRadius="18" Padding="16">
+                  <StackPanel>
+                    <TextBlock Text="Selected Agent Snapshot" FontFamily="Bahnschrift SemiBold" FontSize="20" Foreground="{StaticResource InkBrush}" />
+                    <TextBlock Text="Select an agent from the table below to review their live staffing data and update their profile." Margin="0,8,0,18" Foreground="{StaticResource MutedInkBrush}" TextWrapping="Wrap" />
+                    <Grid>
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="140" />
+                        <ColumnDefinition Width="*" />
+                      </Grid.ColumnDefinitions>
+                      <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                      </Grid.RowDefinitions>
+                      <TextBlock Text="Name" Foreground="{StaticResource MutedInkBrush}" />
+                      <TextBlock Grid.Column="1" Text="{Binding SelectedAgentNameDisplay}" Foreground="{StaticResource InkBrush}" FontWeight="SemiBold" />
+                      <TextBlock Grid.Row="1" Text="Email" Margin="0,10,0,0" Foreground="{StaticResource MutedInkBrush}" />
+                      <TextBlock Grid.Row="1" Grid.Column="1" Margin="0,10,0,0" Text="{Binding SelectedAgentEmailDisplay}" Foreground="{StaticResource InkBrush}" />
+                      <TextBlock Grid.Row="2" Text="Username" Margin="0,10,0,0" Foreground="{StaticResource MutedInkBrush}" />
+                      <TextBlock Grid.Row="2" Grid.Column="1" Margin="0,10,0,0" Text="{Binding SelectedAgentUsernameDisplay}" Foreground="{StaticResource InkBrush}" />
+                      <TextBlock Grid.Row="3" Text="Calls Today" Margin="0,10,0,0" Foreground="{StaticResource MutedInkBrush}" />
+                      <TextBlock Grid.Row="3" Grid.Column="1" Margin="0,10,0,0" Text="{Binding SelectedAgentCallsTodayDisplay}" Foreground="{StaticResource InkBrush}" FontWeight="SemiBold" />
+                      <TextBlock Grid.Row="4" Text="Scheduled Calls" Margin="0,10,0,0" Foreground="{StaticResource MutedInkBrush}" />
+                      <TextBlock Grid.Row="4" Grid.Column="1" Margin="0,10,0,0" Text="{Binding SelectedAgentScheduledCallsDisplay}" Foreground="{StaticResource InkBrush}" FontWeight="SemiBold" />
+                      <TextBlock Grid.Row="5" Text="Talk Time" Margin="0,10,0,0" Foreground="{StaticResource MutedInkBrush}" />
+                      <TextBlock Grid.Row="5" Grid.Column="1" Margin="0,10,0,0" Text="{Binding SelectedAgentTalkTimeDisplay}" Foreground="{StaticResource InkBrush}" FontWeight="SemiBold" />
+                      <TextBlock Grid.Row="6" Text="Check In" Margin="0,10,0,0" Foreground="{StaticResource MutedInkBrush}" />
+                      <TextBlock Grid.Row="6" Grid.Column="1" Margin="0,10,0,0" Text="{Binding SelectedAgentCheckInDisplay}" Foreground="{StaticResource InkBrush}" />
+                      <TextBlock Grid.Row="7" Text="Check Out" Margin="0,10,0,0" Foreground="{StaticResource MutedInkBrush}" />
+                      <TextBlock Grid.Row="7" Grid.Column="1" Margin="0,10,0,0" Text="{Binding SelectedAgentCheckOutDisplay}" Foreground="{StaticResource InkBrush}" />
+                    </Grid>
+                  </StackPanel>
+                </Border>
+              </Grid>
+              <TextBlock Text="Active Agents" Margin="0,0,0,12" FontFamily="Bahnschrift SemiBold" FontSize="20" Foreground="{StaticResource InkBrush}" />
+              <DataGrid x:Name="AgentsGrid" ItemsSource="{Binding Agents}" SelectedItem="{Binding SelectedAgent}" SelectionChanged="AgentsGrid_OnSelectionChanged" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False" CanUserResizeRows="False" IsReadOnly="True" RowHeaderWidth="0">
                 <DataGrid.Columns>
-                  <DataGridTextColumn Header="Agent" Binding="{Binding AgentName}" Width="*" />
+                  <DataGridTextColumn Header="Agent" Binding="{Binding FullName}" Width="*" />
+                  <DataGridTextColumn Header="Email" Binding="{Binding Email}" Width="*" />
+                  <DataGridTextColumn Header="Username" Binding="{Binding Username}" Width="140" />
                   <DataGridTextColumn Header="Calls Today" Binding="{Binding CallsToday}" Width="120" />
+                  <DataGridTextColumn Header="Scheduled Calls" Binding="{Binding ScheduledCalls}" Width="140" />
                   <DataGridTextColumn Header="Talk Time" Binding="{Binding TalkTime}" Width="140" />
                   <DataGridTextColumn Header="Check In" Binding="{Binding CheckIn}" Width="120" />
                   <DataGridTextColumn Header="Check Out" Binding="{Binding CheckOut}" Width="120" />

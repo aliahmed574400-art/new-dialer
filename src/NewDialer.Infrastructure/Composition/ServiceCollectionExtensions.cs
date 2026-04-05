@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NewDialer.Application;
 using NewDialer.Application.Abstractions;
 using NewDialer.Infrastructure.Activity;
+using NewDialer.Infrastructure.Agents;
 using NewDialer.Infrastructure.Auth;
 using NewDialer.Infrastructure.Leads;
 using NewDialer.Infrastructure.Platform;
@@ -17,6 +18,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IDateTimeProvider, SystemDateTimeProvider>();
         services.AddScoped<ISubscriptionAccessEvaluator, SubscriptionAccessEvaluator>();
         services.AddScoped<IAgentActivityService, AgentActivityService>();
+        services.AddScoped<IAgentManagementService, AgentManagementService>();
         services.AddScoped<ILeadSpreadsheetService, ClosedXmlLeadSpreadsheetService>();
         services.AddScoped<ILeadManagementService, LeadManagementService>();
         services.AddScoped<IPasswordHasher, Pbkdf2PasswordHasher>();
