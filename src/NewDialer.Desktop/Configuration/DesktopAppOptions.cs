@@ -6,7 +6,7 @@ namespace NewDialer.Desktop.Configuration;
 public sealed class DesktopAppOptions
 {
     private const string DefaultApiBaseUrl = "https://new-dialer.onrender.com/";
-    private const string DefaultZoomUriScheme = "tel";
+    private const string DefaultZoomUriScheme = "zoomphonecall";
 
     public string ApiBaseUrl { get; init; } = DefaultApiBaseUrl;
 

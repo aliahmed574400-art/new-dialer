@@ -121,17 +121,24 @@ public sealed class ZoomDesktopDialerClient
     private IEnumerable<string> BuildDialUris(string normalizedPhoneNumber)
     {
         var preferredScheme = string.IsNullOrWhiteSpace(_options.ZoomUriScheme)
-            ? "tel"
+            ? "zoomphonecall"
             : _options.ZoomUriScheme.Trim().TrimEnd(':');
 
-        var supportedSchemes = new[] { preferredScheme, "callto", "zoomphonecall" }
+        var supportedSchemes = new[] { preferredScheme, "zoomphonecall", "tel", "callto" }
             .Where(x => !string.IsNullOrWhiteSpace(x))
             .Distinct(StringComparer.OrdinalIgnoreCase);
 
         foreach (var scheme in supportedSchemes)
         {
-            yield return $"{scheme}:{normalizedPhoneNumber}";
+            yield return FormatDialUri(scheme, normalizedPhoneNumber);
         }
+    }
+
+    private static string FormatDialUri(string scheme, string normalizedPhoneNumber)
+    {
+        return scheme.Equals("zoomphonecall", StringComparison.OrdinalIgnoreCase)
+            ? $"{scheme}://{normalizedPhoneNumber}"
+            : $"{scheme}:{normalizedPhoneNumber}";
     }
 
     private string? DiscoverExecutablePath()
@@ -198,15 +205,33 @@ public sealed class ZoomDesktopDialerClient
         }
 
         var builder = new System.Text.StringBuilder(phoneNumber.Length);
+        var hadLeadingPlus = phoneNumber.TrimStart().StartsWith("+", StringComparison.Ordinal);
+
         foreach (var character in phoneNumber)
         {
-            if (char.IsDigit(character) || character == '+')
+            if (char.IsDigit(character))
             {
                 builder.Append(character);
             }
         }
 
-        return builder.ToString();
+        var digits = builder.ToString();
+        if (string.IsNullOrWhiteSpace(digits))
+        {
+            return string.Empty;
+        }
+
+        if (hadLeadingPlus)
+        {
+            return $"+{digits}";
+        }
+
+        return digits.Length switch
+        {
+            10 => $"+1{digits}",
+            11 when digits.StartsWith("1", StringComparison.Ordinal) => $"+{digits}",
+            _ => $"+{digits}",
+        };
     }
 
     private static bool LaunchProcess(ProcessStartInfo startInfo)
