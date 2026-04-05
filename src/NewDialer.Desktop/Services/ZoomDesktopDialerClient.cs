@@ -59,14 +59,13 @@ public sealed class ZoomDesktopDialerClient
 
         await WarmUpAsync(cancellationToken);
 
-        var uriScheme = string.IsNullOrWhiteSpace(_options.ZoomUriScheme) ? "zoomphonecall" : _options.ZoomUriScheme.Trim();
-        var zoomUri = $"{uriScheme}:{Uri.EscapeDataString(normalizedPhoneNumber)}";
-        if (!TryLaunchZoomUrl(zoomUri))
+        if (!TryLaunchDialRequest(normalizedPhoneNumber))
         {
             throw new InvalidOperationException(
-                "Zoom desktop dialing is not available. Confirm Zoom Workplace is installed and the zoomphonecall protocol is registered on this machine.");
+                "Zoom desktop dialing is not available. Confirm Zoom Workplace is installed and that Zoom is the default app for zoomphonecall, tel, or callto links on this machine.");
         }
 
+        TryActivateZoomWindow();
         await DelayAsync(_options.ZoomActionDelayMs, cancellationToken);
     }
 
@@ -77,25 +76,62 @@ public sealed class ZoomDesktopDialerClient
         SendKeyChord(VkControl, VkShift, VkE);
     }
 
-    private bool TryLaunchZoomUrl(string zoomUri)
+    private bool TryLaunchDialRequest(string normalizedPhoneNumber)
     {
-        var executablePath = DiscoverExecutablePath();
-        if (!string.IsNullOrWhiteSpace(executablePath))
+        foreach (var dialUri in BuildDialUris(normalizedPhoneNumber))
         {
-            return LaunchProcess(new ProcessStartInfo
+            if (LaunchProcess(new ProcessStartInfo
+            {
+                FileName = dialUri,
+                UseShellExecute = true,
+            }))
+            {
+                return true;
+            }
+        }
+
+        var executablePath = DiscoverExecutablePath();
+        if (string.IsNullOrWhiteSpace(executablePath))
+        {
+            return false;
+        }
+
+        foreach (var dialUri in BuildDialUris(normalizedPhoneNumber))
+        {
+            if (LaunchProcess(new ProcessStartInfo
             {
                 FileName = executablePath,
-                Arguments = $"--url=\"{zoomUri}\"",
+                Arguments = $"--url=\"{dialUri}\"",
                 UseShellExecute = true,
                 WorkingDirectory = Path.GetDirectoryName(executablePath),
-            });
+            }))
+            {
+                return true;
+            }
         }
 
         return LaunchProcess(new ProcessStartInfo
         {
-            FileName = zoomUri,
+            FileName = executablePath,
             UseShellExecute = true,
+            WorkingDirectory = Path.GetDirectoryName(executablePath),
         });
+    }
+
+    private IEnumerable<string> BuildDialUris(string normalizedPhoneNumber)
+    {
+        var preferredScheme = string.IsNullOrWhiteSpace(_options.ZoomUriScheme)
+            ? "tel"
+            : _options.ZoomUriScheme.Trim().TrimEnd(':');
+
+        var supportedSchemes = new[] { preferredScheme, "callto", "zoomphonecall" }
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var scheme in supportedSchemes)
+        {
+            yield return $"{scheme}:{normalizedPhoneNumber}";
+        }
     }
 
     private string? DiscoverExecutablePath()
