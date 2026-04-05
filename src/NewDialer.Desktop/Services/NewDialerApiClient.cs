@@ -272,7 +272,7 @@ public sealed class NewDialerApiClient : IDisposable
     {
         if (string.IsNullOrWhiteSpace(apiBaseUrl))
         {
-            return "http://localhost:5164/";
+            return "https://new-dialer.onrender.com/";
         }
 
         var trimmed = apiBaseUrl.Trim();

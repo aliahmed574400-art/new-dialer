@@ -66,11 +66,8 @@
               <TextBlock Text="{Binding ErrorMessage}" Foreground="#FFB42318" TextWrapping="Wrap" />
             </Border>
 
-            <TextBlock Text="API URL" Margin="0,20,0,8" Foreground="{StaticResource InkBrush}" FontWeight="SemiBold" />
-            <TextBox Text="{Binding ApiBaseUrl, UpdateSourceTrigger=PropertyChanged}" Padding="12,10" BorderBrush="{StaticResource OutlineBrush}" BorderThickness="1" />
-
             <StackPanel Visibility="{Binding IsLoginMode, Converter={StaticResource BoolToVis}}">
-              <TextBlock Text="Email Or Username" Margin="0,16,0,8" Foreground="{StaticResource InkBrush}" FontWeight="SemiBold" />
+              <TextBlock Text="Email Or Username" Margin="0,20,0,8" Foreground="{StaticResource InkBrush}" FontWeight="SemiBold" />
               <TextBox Text="{Binding LoginIdentity, UpdateSourceTrigger=PropertyChanged}" Padding="12,10" BorderBrush="{StaticResource OutlineBrush}" BorderThickness="1" />
               <TextBlock Text="Workspace Key (required for agent usernames)" Margin="0,16,0,8" Foreground="{StaticResource InkBrush}" FontWeight="SemiBold" />
               <TextBox Text="{Binding LoginWorkspaceKey, UpdateSourceTrigger=PropertyChanged}" Padding="12,10" BorderBrush="{StaticResource OutlineBrush}" BorderThickness="1" />
@@ -79,7 +76,7 @@
             </StackPanel>
 
             <StackPanel Visibility="{Binding IsSignupMode, Converter={StaticResource BoolToVis}}">
-              <TextBlock Text="Full Name" Margin="0,16,0,8" Foreground="{StaticResource InkBrush}" FontWeight="SemiBold" />
+              <TextBlock Text="Full Name" Margin="0,20,0,8" Foreground="{StaticResource InkBrush}" FontWeight="SemiBold" />
               <TextBox Text="{Binding SignupFullName, UpdateSourceTrigger=PropertyChanged}" Padding="12,10" BorderBrush="{StaticResource OutlineBrush}" BorderThickness="1" />
               <TextBlock Text="Email" Margin="0,16,0,8" Foreground="{StaticResource InkBrush}" FontWeight="SemiBold" />
               <TextBox Text="{Binding SignupEmail, UpdateSourceTrigger=PropertyChanged}" Padding="12,10" BorderBrush="{StaticResource OutlineBrush}" BorderThickness="1" />
